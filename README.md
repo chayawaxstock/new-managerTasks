@@ -1,4 +1,4 @@
-# Cross app - Task Managmant
+# Task Managmant
 
 ## Using this technologies:
 
@@ -10,8 +10,8 @@
 
 ## Authors
 
-* **Efart Zadok** - *a depeloper* - (efrat0879@gmail.com)
-* **Tamar Yankelevich- rosenzweig** - *a depeloper* - (tamary9097@gmail.com)
+* **Chaya Waxstock** - *a depeloper* - (c0556777462@gmail.com)
+* **Chana Valder** - *a depeloper* - (chani@gmail.com)
 
 ## Description
  
@@ -20,15 +20,15 @@
 ## Development server
 
 To install the app in your computer you have to:
-  1. [Run the `mySql` code](https://github.com/tamarosenzweig/TaskManagmant/blob/master/mysql-queries.md)
+  1. [Run the `mySql` code](https://github.com/chayawaxstock/finishcourseseldat/blob/master/%D7%A4%D7%A8%D7%95%D7%99%D7%A7%D7%98%20%D7%A1%D7%95%D7%A4%D7%99%20%D7%A1%D7%9C%D7%93%D7%98/%D7%93%D7%98%D7%94%20%D7%91%D7%99%D7%99%D7%A1/database.sql)
       To see some data in the live demo, you should add data to your tabels or
       [Run the data- script code](https://github.com/tamarosenzweig/TaskManagmant/blob/master/mysql-script.md)
       
 
-  2. Run the `back-end` project.(the web api one)  This is the server. Navigate to `http://localhost:4722/`. 
-     The app will automatically reload if you change any     of the source files. The details on the server you can see also in the `environments` file  in the angular app, or in the `app config` file   in the cs project (win form) in the `appSetting` attribute.
-
-
+  2. Run the `back-end` project.(the web api one)  This is the server. Navigate to `http://localhost:12988/`. 
+     The app will automatically reload 
+     
+     
   3.  Run the `php` server by 
         ```sh 
         shift+f6
@@ -37,10 +37,9 @@ To install the app in your computer you have to:
 
   4.  Run `ng serve` for a dev server, if you want to run the angular project. Navigate to `http://localhost:4200/`. 
       The app will automatically reload if you change any of the source files.
-      shoose which server you want to: the web api or the php one. 
-      you can choose it in the `enviorments` and in the `global` page. update it.
+      shoose which server you want to: the web api or the php one in the `global` page. update it.
 
-  5. Run the win form project, if you want it to be the client.
+  5. Run the winform project, if you want it to be the client.
       
         *important note: in order to `send email` feature  from the php server(just if you have xampp) in your computer follow this instruction:* 
         
@@ -78,17 +77,18 @@ Task Managmant uses a number of extension:
 
 *in web api platform we use:*
    
-* from [Nuget](https://www.nuget.org/packages/Microsoft.CSharp/) we use the Microsoft.AspNet.WebApi.Client
+* from [Nuget](https://www.nuget.org/packages/Microsoft.AspNet.WebApi.Cors/) we use the Microsoft.AspNet.WebApi.Cors
+* from [Nuget](https://www.nuget.org/packages/MySql.Data/) we use the MySql.Data
 
 *in angular platform we use:*
     
-  * [Angular CLI](https://github.com/angular/angular-cli) version 6.1.5.
+  * [Angular CLI](https://github.com/angular/angular-cli) version 7.0.4.
         
-    * [Angular MATERIAL](https://material.angular.io/) Material Design components for Angular
+    * [Angular kendo](https://www.telerik.com/kendo-angular-ui/) Kendo UI for Angular 
         
-    * [Sweet Alert](https://sweetalert2.github.io/) beatuiul java script pop up   
+    * [Sweet Alert](https://sweetalert2.github.io/) beatifull java script pop up   
 
-*in win form platform we use:* 
+*in winform platform we use:* 
 
 * [Telerik](https://docs.telerik.com/devtools/winforms/introduction) Performance you demand, UI you can't believe
 
@@ -102,21 +102,22 @@ Task Managmant uses a number of extension:
 * User:
 
     * UserId - int, auto increament,primary key
-    * UserName - string - minLength: 2, maxLength:15, reqiered
-    * Email - string -  reqiered ,pattern
-    * Password - string - minLength: 2, maxLength:20, reqiered
-    * IsManager - boolean - reqiered
+    * UserName - string - minLength: 2, maxLength:15, reqiered,unique
+    * Email - string -  reqiered ,pattern, unique
+    * Password - string - minLength: 8, maxLength:20, reqiered, unique
+    * Ip- string
+    * NumHoursWork- int between 1-12
+    * ManagerId - int
     * DepartmentId - int, required
-    * TeamLeaderId - int
     * Navigation  properties:
         * Department - `Department` type
-        * TeamLeader - `User` type
+        * Manager - `User` type
+        * ProjectsWorkers- `ProjectsWorkers` type
 
 * Project:
 
     * ProjectId - int, auto increament,primary key
     * ProjectName - string - minLength: 2, maxLength:15, reqiered
-    * TotalHours - int, required
     * TotalHours - int, required
     * StartDate - dateTime, required
     * endDate - dateTime, required
@@ -136,7 +137,7 @@ Task Managmant uses a number of extension:
         * Project - `Project` type
         * Department - `Department` type
 
-* WorkerHours:
+* WorkerProject:
 
     * WorkerHours - int, auto increament,primary key
     * ProjectId - int
@@ -161,13 +162,7 @@ Task Managmant uses a number of extension:
 
     * DepartmentId - int, auto increament,primary key
     * DepartmentName - string - minLength: 2, maxLength:15, reqiered 
-
-* Customer:
-
-    * CustomerId - int, auto increament,primary key
-    * CustomerName - string - minLength: 2, maxLength:15, reqiered 
-
-
+ 
 ### Help Models
 
 * Email:
@@ -177,7 +172,6 @@ Task Managmant uses a number of extension:
     * ToAddress - List<string 
     * UserName - string  
     * Password - string
-    the last 3 properties are utomatically restarted in the c'tor.
 
 * Login:
 
