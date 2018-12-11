@@ -121,11 +121,12 @@ Task Managmant uses a number of extension:
     * TotalHours - int, required
     * StartDate - dateTime, required
     * endDate - dateTime, required
-    * CustomerId - int, required
-    * TeamLeaderId - int, required 
+    * Customer - int, required
+    * IsFinish- bool 
+    * ManagerId - int, required 
     * Navigation  properties:
         * Customer - `Customer` type
-        * TeamLeader - `User` type
+        * List<HoursForDepartment> - `HoursForDepartment` type
 
 * DepartmentHours:
 
@@ -135,9 +136,10 @@ Task Managmant uses a number of extension:
     * numHours -int
      * Navigation  properties:
         * Project - `Project` type
-        * Department - `Department` type
+        * Department - `Department` type 
+        * List<ProjectWorker> `ProjectWorker` type
 
-* WorkerProject:
+* ProjectWorker:
 
     * WorkerHours - int, auto increament,primary key
     * ProjectId - int
@@ -152,8 +154,9 @@ Task Managmant uses a number of extension:
     * PresenceHours - int, auto increament,primary key
     * ProjectId - int
     * WorkerId -int
-    * Date- dateTime
-    * numHours -int
+    * TimeBegin- dateTime
+    * TimeEnd- dateTime
+    * SumHoursDay -int
      * Navigation  properties:
         * Project - `Project` type
         * Worker - `User` type       
@@ -169,14 +172,13 @@ Task Managmant uses a number of extension:
 
     * Subject - string
     * Body - string , reqiered 
-    * ToAddress - List<string 
-    * UserName - string  
-    * Password - string
 
 * Login:
 
      * Email - string -  reqiered ,pattern
-     * Password - string - minLength: 2, maxLength:20, reqiered
+     * Password - string - minLength: 8, maxLength:20, reqiered
+     * Ip- string
+     
 
 ### Controllers
 
@@ -194,7 +196,7 @@ Task Managmant uses a number of extension:
      * The manager can manage his workers:
          * Add user - add a new user    
               requierd data: a `User` object
-              If the user details is valid - we will add the user to the UsersList, and return true, Else - we will return a matching error
+              If the user details is valid - we will add the user to the UsersList, and return true, Else - we will return a matching                 error
          * Edit user- edit worker's details 
            requierd data: a `User` object
            If the update was successful - we will return true, else a suitable message will be send to him.
@@ -202,22 +204,24 @@ Task Managmant uses a number of extension:
            requierd data:`user id` 
            If the delete prompt was successful - we will return true, else a suitable message will be send to him.
          * Edit pemission - allow the worker to work in other projects, not in his team leader's group. 
-                             requierd data:`Permission` 
-                             If the permission details is valid - we will add the permission to the PermissionsList, and return true, Else - we will return a matching error
+                             requierd data:`projectWorker` 
+                             If the projectWorker details is valid - we will add the projectWorker to the projectWorkersList, and return                              true, Else - we will return a matching error
 
   * Projects managmant:
 
+    * GetAllProjects- get all the projects in this company.
     * Add project - add a new project   
              requierd data: a `Project` object
              If the project details is valid - we will add the project to the ProjectsList, and return true, Else - we will return a matching error
-
-    * GetProjectsReports-  get all the details that the manager needs to the report. The manager can also filter the report assign to his needs
-     and to exporet it into an Excel file.
-
-  * Teams managmant:
-    * GetAllTeamLeaders- get all the team leaders in this company.
-
-    * Manage the teams: allow editing the team of a specific team leader, remove or add workers to his team.We call to `Edit user` method, to    edit the `team leader id` propert in the `User` members. (see details above.)
+             
+     * Edit project- edit project's details 
+           requierd data: a `Project` object
+           If the update was successful - we will return true, else a suitable message will be send to him.
+     * GetProjectsReports-  get all the details that the manager needs to the report. The manager can also filter the report assign to his needs
+      and to exporet it into an Excel file,Pdf file.
+    * GetWorkersReports-  get all the details that the manager needs to the report. The manager can also filter the report assign to his needs
+      and to exporet it into an Excel file,Pdf file.
+ 
 
 * TeamLeader screens:
 
@@ -232,22 +236,20 @@ Task Managmant uses a number of extension:
 
         * GetAllProjects- get all the projects in this company,that belongs to this team leader.
         The team leader can see the status of each project. 
-        (the function in the reports is `get project reports` that gets all the project's details.)
 
-    * GetPresenceStatusPerWorkers- by this function the team leader can see a graph of his workers.   
-       requierd data: `teamLeaderId`
+        * GetPresenceStatusPerWorkers- by this function the team leader can see a graph of his workers.   
+           requierd data: `teamLeaderId`
               
    
-* Worker screens:
+    * Worker screens:
 
-     * Send Email- send email from the worker to his manager.
-       requierd data: `Email` objeat and a `User` object
+       * Send Email- send email from the worker to his manager.
+         requierd data: `Email` objeat 
        
-    * GetAllProjects- get all the projects in this company,that belongs to this worker.
+      * GetAllProjects- get all the projects in this company,that belongs to this worker.
         The worker can see the status of each project. 
-        (the function in the reports is `get project reports` that gets all the project's details.)
 
-    * The worker can see also a graph of his projects by the month.
+      * The worker can see also a graph of his hours done for his projects.
  
 
 ***
