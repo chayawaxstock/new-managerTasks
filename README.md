@@ -241,15 +241,16 @@ Task Managmant uses a number of extension:
            requierd data: `teamLeaderId`
               
    
-    * Worker screens:
+ * Worker screens:
 
-       * Send Email- send email from the worker to his manager.
+    * Worker managmant:
+        * Send Email- send email from the worker to his manager.
          requierd data: `Email` objeat 
        
-      * GetAllProjects- get all the projects in this company,that belongs to this worker.
-        The worker can see the status of each project. 
+        * GetAllProjects- get all the projects in this company,that belongs to this worker.
+          The worker can see the status of each project. 
 
-      * The worker can see also a graph of his hours done for his projects.
+        * The worker can see also a graph of his hours done for his projects.
  
 
 ***
