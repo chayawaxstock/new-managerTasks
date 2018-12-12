@@ -1399,6 +1399,1533 @@ namespace BOL.Convertors
 }
 
 ```
+
+### BLL
+```csharp
+using System.Collections.Generic;
+using System.Web.Http.ModelBinding;
+
+namespace BLL
+{
+    public class BaseLogic
+    {
+        public static List<string> GetErorList(ICollection<ModelState> values)
+        {
+            List<string> ErrorList = new List<string>();
+            foreach (var item in values)
+                foreach (var err in item.Errors)
+                    ErrorList.Add(err.ErrorMessage);
+            return ErrorList;
+        }
+    }
+}
+
+
+using _00_DAL;
+using BOL;
+using BOL.Convertors;
+using BOL.HelpModel;
+using BOL.Models;
+using MySql.Data.MySqlClient;
+using System;
+using System.Collections.Generic;
+using System.Configuration;
+using System.Net.Mail;
+
+namespace BLL
+{
+    public class LogicManager
+    {
+        /// <summary>
+        /// Get all users
+        /// </summary>
+        /// <returns>List<User> </returns>
+        public static List<User> GetAllUsers()
+        {
+            string query = $"SELECT * FROM user u JOIN department d ON u.departmentUserId=d.id LEFT JOIN user uu ON u.managerId=uu.id ;";
+            Func<MySqlDataReader, List<User>> func = (reader) =>
+            {
+                List<User> users = new List<User>();
+                while (reader.Read())
+                {
+                    users.Add(ConvertorUser.convertDBtoUserWithManager(reader));
+                }
+                return users;
+            };
+            return DBAccess.RunReader(query, func);
+        }
+
+        /// <summary>
+        /// Check if exist user with same password
+        /// </summary>
+        /// <returns>bool true- exists user , false- no exists</returns>
+        public static bool PasswordUnique(string password)
+        {
+            string query = $"select count(password) from user where user.password='{password}';";
+            return Convert.ToInt32(DBAccess.RunScalar(query)) == 0 ? true : false;
+        }
+
+        /// <summary>
+        /// Get all departments
+        /// </summary>
+        /// <returns> List<DepartmentUser>- all departments</returns>
+        public static List<DepartmentUser> GetAllDepartments()
+        {
+            string query = $"SELECT * FROM managertasks.department  ";
+
+            Func<MySqlDataReader, List<DepartmentUser>> func = (reader) =>
+            {
+                List<DepartmentUser> departments = new List<DepartmentUser>();
+                while (reader.Read())
+                {
+                    departments.Add(ConvertDepartment.convertDBtoDepartment(reader));
+                }
+                return departments;
+            };
+
+            return DBAccess.RunReader(query, func);
+        }
+
+
+        /// <summary>
+        /// Forgot password-check if userName exists if exists send Email with link to change password
+        /// </summary>
+        /// <param name="userName">userName</param>
+        /// <returns>bool- true if exists false if not found</returns>
+        public static bool ForgetPassword(string userName)
+        {
+            string query = $"SELECT * FROM managertasks.user WHERE userName='{userName}'";
+            Func<MySqlDataReader, List<User>> func = (reader) =>
+            {
+                List<User> users = new List<User>();
+                while (reader.Read())
+                {
+                    users.Add(ConvertorUser.convertDBtoUser(reader));
+                }
+
+                return users;
+            };
+            List<User> user = DBAccess.RunReader(query, func);
+            //Inserts into table requestpassword- userName and idRequest
+            if (user.Count > 0)
+            {
+                query = $" START TRANSACTION;INSERT INTO requestpassword(userName,startDate,endDate) value('{userName}','{DateTime.Now}' '{DateTime.Today.AddDays(1)}');  SELECT max(idRequest) from requestpassword;  commit";
+                int result = Convert.ToInt32(DBAccess.RunScalar(query));
+                return SendEmail("chany55488@gmail.com", user[0].Email, "change password", $@"<a href='http://localhost:4200/changePassword/{result}'>change password</a>");
+            }
+            return false;
+        }
+
+
+        /// <summary>
+        /// Get users by department
+        /// </summary>
+        /// <param name="departmentName"> department name</param>
+        /// <returns>List<User>-users in this department</returns>
+        public static List<User> GetUserByDepartment(string departmentName)
+        {
+            string query = $"SELECT * FROM managertasks.user JOIN managertasks.department ON user.departmentUserId=department.id WHERE Department='{departmentName}'";
+
+            Func<MySqlDataReader, List<User>> func = (reader) =>
+            {
+                List<User> users = new List<User>();
+                while (reader.Read())
+                {
+                    users.Add(ConvertorUser.convertDBtoUserWithDepartment(reader));
+                }
+                return users;
+            };
+            return DBAccess.RunReader(query, func);
+        }
+
+
+        /// <summary>
+        /// Gets the amount of hours they did the worker to a specific team project and project. 
+        /// </summary>
+        /// <param name="teamleaderId">teamLeaderId</param>
+        /// <param name="projectId">projectId</param>
+        /// <returns>List<SumHoursDoneUser>sum hours done worker</returns>
+        public static List<SumHoursDoneUser> GetSumHoursDoneForUsers(int teamleaderId, int projectId)
+        {
+            string query = $"SELECT sum(sumHours),u.userName FROM presentday p JOIN user u on u.id= p.id WHERE u.managerId ={teamleaderId} AND projectId={projectId} GROUP BY u.id";
+
+            Func<MySqlDataReader, List<SumHoursDoneUser>> func = (reader) =>
+            {
+                List<SumHoursDoneUser> users = new List<SumHoursDoneUser>();
+                while (reader.Read())
+                {
+                    users.Add(ConvertSumHoursUser.convertDBtoSumHoursUser(reader));
+                }
+                return users;
+            };
+
+            return DBAccess.RunReader(query, func);
+        }
+
+        /// <summary>
+        /// Gets sum of hours a worker has worked on according to his projects
+        /// </summary>
+        /// <param name="userId">workerId</param>
+        /// <returns>List<SumHoursDoneUser>- sum hours worked according project</returns>
+        public static List<SumHoursDoneUser> GetHoursForUserProjects(int userId)
+        {
+            string query = $"SELECT * FROM sumHoursForUserProject WHERE id={userId}";
+
+            Func<MySqlDataReader, List<SumHoursDoneUser>> func = (reader) =>
+            {
+                List<SumHoursDoneUser> users = new List<SumHoursDoneUser>();
+                while (reader.Read())
+                {
+                    users.Add(ConvertSumHoursUser.convertDBtoSumHoursUser1(reader));
+                }
+                return users;
+            };
+
+            return DBAccess.RunReader(query, func);
+        }
+
+        /// <summary>
+        /// Gets hour for projects and all projects of worker
+        /// </summary>
+        /// <param name="userId">workerId</param>
+        /// <returns>List<ProjectWorker></returns>
+        public static List<ProjectWorker> GetHoursAndProjectForUser(int userId)
+        {
+            string query = $"SELECT pw.projectId,pw.id,pw.hoursForProject,p.name,u.userName FROM   project p JOIN projectworker pw ON  p.projectId =pw.projectId JOIN user u ON pw.id =u.id WHERE pw.id={userId}";
+
+            Func<MySqlDataReader, List<ProjectWorker>> func = (reader) =>
+            {
+                List<ProjectWorker> users = new List<ProjectWorker>();
+                while (reader.Read())
+                {
+                    users.Add(ConvertProjectWorker.convertDBtoProjectWorkersWithProjectAndUserShort(reader));
+                }
+                return users;
+            };
+
+            return DBAccess.RunReader(query, func);
+        }
+
+        /// <summary>
+        /// Gets the amount of hours they did the worker to a specific team project and project. 
+        /// </summary>
+        /// <param name="teamleaderId">teamLeaderId</param>
+        /// <param name="projectId">projectId</param>
+        /// <returns>List<SumHoursDoneUser>sum hours done worker</returns>
+        public static List<SumHoursDoneUser> GetWorkerHourDoProjects(int teamleaderId, int idProject)
+        {
+            string query = $"SELECT sum(pd.sumHours),u.userName  FROM user u JOIN projectworker pw ON pw.id = u.id LEFT JOIN presentday pd ON pd.id = u.id WHERE u.managerId = {teamleaderId} AND pw.projectId = {idProject} AND pd.projectId = {idProject} GROUP BY pw.projectId ,pw.id ";
+
+            Func<MySqlDataReader, List<SumHoursDoneUser>> func = (reader) =>
+            {
+                List<SumHoursDoneUser> sumHoursDoneUser = new List<SumHoursDoneUser>();
+                while (reader.Read())
+                {
+                    sumHoursDoneUser.Add(ConvertSumHoursUser.convertDBtoSumHoursUser(reader));
+                }
+                return sumHoursDoneUser;
+            };
+
+            return DBAccess.RunReader(query, func);
+        }
+
+        /// <summary>
+        /// Gets workers that work in this project
+        /// </summary>
+        /// <param name="projectId">projectId</param>
+        /// <returns> List<ProjectWorker>-worker in this project</returns>
+        public static List<ProjectWorker> GetUsersBelongProjects(int projectId)
+        {
+            string query = $"SELECT * FROM project p JOIN projectworker pw ON  p.projectId =pw.projectId JOIN user u ON pw.id =u.id WHERE pw.projectId={projectId} AND pw.isActive=true";
+            List<ProjectWorker> projectWorker = new List<ProjectWorker>();
+            Func<MySqlDataReader, List<ProjectWorker>> func = (reader) =>
+            {
+                List<ProjectWorker> projectWorkers = new List<ProjectWorker>();
+                while (reader.Read())
+                {
+                    projectWorkers.Add(ConvertProjectWorker.convertDBtoProjectWorkersWithProjectAndUser(reader));
+                }
+                return projectWorkers;
+            };
+
+            projectWorker = DBAccess.RunReader(query, func);
+            if (projectWorker != null)
+                foreach (var item in projectWorker)
+                {
+                    query = $" SELECT sum(sumHours) FROM managertasks.presentday where id ={item.UserId} and projectId ={item.ProjectId}";
+                    string result = DBAccess.RunScalar(query).ToString();
+                    item.SumHoursDone = result != string.Empty ? decimal.Parse(result.ToString()) : 0;
+                }
+            return projectWorker;
+        }
+
+        /// <summary>
+        /// Gets simple workers not- manager, teamLeader
+        /// </summary>
+        /// <returns>List<User> users -simple workers</returns>
+        public static List<User> GetWorkers()
+        {
+            string query = $"SELECT * FROM managertasks.user JOIN managertasks.department ON user.departmentUserId=department.id WHERE Department NOT IN ('teamLeader','manager')";
+
+            Func<MySqlDataReader, List<User>> func = (reader) =>
+            {
+                List<User> users = new List<User>();
+                while (reader.Read())
+                {
+                    users.Add(ConvertorUser.convertDBtoUser(reader));
+                }
+                return users;
+            };
+
+            return DBAccess.RunReader(query, func);
+        }
+
+        /// <summary>
+        /// Gets projects of teamLeader
+        /// </summary>
+        /// <param name="id">teamLeaderId</param>
+        /// <returns></returns>
+        public static List<Project> GetProjectsManager(int tamLeaderId)
+        {
+            string query = $"SELECT * FROM managertasks.project  WHERE managerId ={tamLeaderId}";
+
+            Func<MySqlDataReader, List<Project>> func = (reader) =>
+            {
+                List<Project> projectsList = new List<Project>();
+                while (reader.Read())
+                {
+                    projectsList.Add(ConvertProject.convertDBtoProjects(reader));
+                }
+                return projectsList;
+            };
+
+            List<Project> managerProjects = DBAccess.RunReader(query, func);
+            managerProjects.ForEach(p =>
+            {
+                p.HoursForDepartment = LogicProjects.GetHoursDepartmentsProject(p.ProjectId);
+            });
+            return managerProjects;
+        }
+
+        /// <summary>
+        /// Gets Worker projects
+        /// </summary>
+        /// <param name="id">workerId</param>
+        /// <returns>List<ProjectWorker>- worker projects</returns>
+        public static List<ProjectWorker> GetProjectsUser(int id)
+        {
+            string query = $"SELECT *,(select sum(sumHours) from presentday pd where pd.id=pw.id and pd.projectId=p.projectId group by id) as sumHoursDone FROM managertasks.projectworker pw join project p on  pw.projectId = p.projectId where pw.id = {id} and p.isFinish=false ";
+            Func<MySqlDataReader, List<ProjectWorker>> func = (reader) =>
+            {
+                List<ProjectWorker> projectsList = new List<ProjectWorker>();
+                while (reader.Read())
+                {
+                    projectsList.Add(ConvertProjectWorker.convertDBtoProjectWorkersWithProject(reader));
+                }
+                return projectsList;
+            };
+
+            return DBAccess.RunReader(query, func);
+        }
+
+        /// <summary>
+        /// Gets user details
+        /// </summary>
+        /// <param name="id">userId</param>
+        /// <returns></returns>
+        public static User GetUserDetails(int id)
+        {
+            string query = $"SELECT * FROM managertasks.user JOIN managertasks.department ON user.departmentUserId=department.id WHERE user.id={id}";
+            List<User> users = new List<User>();
+            Func<MySqlDataReader, List<User>> func = (reader) =>
+            {
+                List<User> projectsWorker = new List<User>();
+                while (reader.Read())
+                {
+                    projectsWorker.Add(ConvertorUser.convertDBtoUser(reader));
+                }
+                return projectsWorker;
+            };
+            List<User> users1 = DBAccess.RunReader(query, func);
+            return users1 != null && users1.Count > 0 ? users1[0] as User : null;
+        }
+
+        /// <summary>
+        /// Gets user by Password- login
+        /// </summary>
+        /// <param name="user">user- contain userName and password</param>
+        /// <returns>User</returns>
+        public static User GetUserDetailsByPassword(LoginUser user)
+        {
+            string query = $"SELECT * FROM managertasks.user JOIN managertasks.department ON user.departmentUserId=department.id  WHERE password='{user.Password}' AND userName='{user.UserName}'";
+
+            Func<MySqlDataReader, List<User>> func = (reader) =>
+            {
+                List<User> users = new List<User>();
+                while (reader.Read())
+                {
+                    users.Add(ConvertorUser.convertDBtoUserWithDepartment(reader));
+                }
+                return users;
+            };
+
+            List<User> usersLogin = DBAccess.RunReader(query, func);
+            if (usersLogin != null && usersLogin.Count > 0 && user.Ip != null)
+            {
+                query = $"SET SQL_SAFE_UPDATES=0;    UPDATE `managertasks`.`user`SET`userComputer` = '{user.Ip}' WHERE password = '{user.Password}' ";
+                DBAccess.RunNonQuery(query);
+                return usersLogin[0];
+            }
+            if (usersLogin != null && usersLogin.Count > 0)
+                return usersLogin[0];
+            return null;
+
+        }
+
+        /// <summary>
+        /// Remove user
+        /// </summary>
+        /// <param name="id">userId</param>
+        /// <returns></returns>
+        public static bool RemoveUser(int id)
+        {
+            string query = $"DELETE FROM managertasks.user WHERE id={id}";
+            return DBAccess.RunNonQuery(query) != null;
+        }
+
+        /// <summary>
+        /// Update user
+        /// </summary>
+        /// <param name="user">Userv to update</param>
+        /// <returns>bool- true if succsess false- if failed </returns>
+        public static bool UpdateUser(User user)
+        {
+            string query;
+            query = user.ManagerId == 0 || user.ManagerId == null ? $"SET SQL_SAFE_UPDATES=0;  UPDATE managertasks.user SET userName='{user.UserName}',departmentUserId={user.DepartmentId} ,email='{user.Email}',userComputer='{user.UserComputer}',numHourWork={user.NumHoursWork}  WHERE id={user.UserId} " : $"SET SQL_SAFE_UPDATES=0; UPDATE managertasks.user SET userName='{user.UserName}',departmentUserId={user.DepartmentId} ,managerId={user.ManagerId} ,email='{user.Email}',userComputer='{user.UserComputer}',numHourWork={user.NumHoursWork}  WHERE id={user.UserId} ";
+            return DBAccess.RunNonQuery(query) != null;
+        }
+
+        /// <summary>
+        /// Add user
+        /// </summary>
+        /// <param name="user">User to add</param>
+        /// <returns>bool- true if success to add user false if failed to add user</returns>
+        public static bool AddUser(User user)
+        {
+            string query;
+            if (user.ManagerId == 0 || user.ManagerId == null)
+                query = $"INSERT INTO `managertasks`.`user`(`userName`,`userComputer`,`password`,`departmentUserId`,`email`,`numHourWork`) VALUES('{user.UserName}','{user.UserComputer}','{user.Password}',{user.DepartmentId},'{user.Email}',{user.NumHoursWork}); ";
+            else query = $"INSERT INTO `managertasks`.`user`(`userName`,`userComputer`,`password`,`departmentUserId`,`email`,`numHourWork`,`managerId`) VALUES('{user.UserName}','{user.UserComputer}','{user.Password}',{user.DepartmentId},'{user.Email}',{user.NumHoursWork},{user.ManagerId}); ";
+            return DBAccess.RunNonQuery(query) != null;
+        }
+
+        /// <summary>
+        /// Gets user details by ip
+        /// </summary>
+        /// <param name="computerUser">ip</param>
+        /// <returns></returns>
+        public static User GetUserDetailsComputerUser(string computerUser)
+        {
+            string query = $" SELECT* FROM managertasks.user JOIN managertasks.department ON user.departmentUserId = department.id  WHERE userComputer = '{computerUser}'";
+
+            Func<MySqlDataReader, List<User>> func = (reader) =>
+            {
+                List<User> users = new List<User>();
+                while (reader.Read())
+                {
+                    users.Add(ConvertorUser.convertDBtoUserWithDepartment(reader));
+
+                }
+                return users;
+            };
+
+            List<User> usersLogin = DBAccess.RunReader(query, func);
+            if (usersLogin != null && usersLogin.Count > 0)
+            {
+                return usersLogin[0];
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Gets manager user
+        /// </summary>
+        /// <param name="idUser">userId</param>
+        /// <returns></returns>
+        public static User GetUserManager(int idUser)
+        {
+            string query = $" select uu.* from user u join user uu on u.managerId=uu.id where u.id={idUser}";
+
+            Func<MySqlDataReader, List<User>> func = (reader) =>
+            {
+                List<User> users = new List<User>();
+                while (reader.Read())
+                {
+                    users.Add(ConvertorUser.convertDBtoUser(reader));
+                }
+                return users;
+            };
+
+            List<User> manager = DBAccess.RunReader(query, func);
+            if (manager != null && manager.Count > 0)
+            {
+                return manager[0];
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Change password
+        /// </summary>
+        /// <param name="requestId">requestId of changePassword</param>
+        /// <param name="user">User- contain userName and new password</param>
+        /// <returns></returns>
+        public static bool ChangePassword(int requestId, LoginUser user)
+        {
+            string query = $"select count(*) from requestpassword where idRequest={requestId} and userName='{user.UserName}' and CURDATE()>";
+            int result = Convert.ToInt32(DBAccess.RunScalar(query));
+            if (result == 1)
+            {
+                query = $"SET SQL_SAFE_UPDATES=0;  UPDATE `managertasks`.`user`SET`password` = '{ user.Password }' WHERE `userName` = '{ user.UserName}'";
+                return DBAccess.RunNonQuery(query) != null;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Send Message to Manager-TeamLeader User
+        /// </summary>
+        /// <param name="idUser">userId</param>
+        /// <param name="message">message contain -subject and body of email</param>
+        /// <returns></returns>
+        public static bool SendMessageToManagers(int idUser, SendEmail message)
+        {
+            User manager = GetUserManager(idUser);
+            User user = GetUserDetails(idUser);
+            if (manager == null)
+                return false;
+            return SendEmail(user.Email, manager.Email, message.Subject, message.Body);
+        }
+
+        /// <summary>
+        /// Send Email
+        /// </summary>
+        /// <param name="emailFrom">from-address email</param>
+        /// <param name="emailTo">to- address email</param>
+        /// <param name="sub">subject email</param>
+        /// <param name="message">body email</param>
+        /// <returns>bool true- succses to send email, false- failed to send email</returns>
+        public static bool SendEmail(string emailFrom, string emailTo, string sub, string message)
+        {
+            SmtpClient client = new SmtpClient();
+            client.DeliveryMethod = SmtpDeliveryMethod.Network;
+            client.EnableSsl = true;
+            client.Host = "smtp.gmail.com";
+            client.Port = 587;
+            System.Net.NetworkCredential credentials = new System.Net.NetworkCredential(ConfigurationManager.AppSettings["emailManager"].ToString(),
+               ConfigurationManager.AppSettings["emailManagerPassword"].ToString());
+            client.UseDefaultCredentials = false;
+            client.Credentials = credentials;
+            MailMessage msg = new MailMessage();
+            msg.From = new MailAddress(emailFrom);
+            msg.To.Add(new MailAddress(emailTo));
+            msg.Subject = sub;
+            msg.IsBodyHtml = true;
+            msg.Body = string.Format($"<html><head>הודעה שנשלחה</head><body><p>{message}</br></p></body>");
+            try
+            {
+                client.Send(msg);
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+    }
+}
+
+using _00_DAL;
+using BOL.Models;
+
+namespace BLL
+{
+    public class LogicPresentDay
+    {
+
+        /// <summary>
+        /// Update pressent- date time
+        /// </summary>
+        /// <param name="present">PresentDay contain- idUser, idProject, dateEnd</param>
+        /// <returns>bool true- succsess to update, false- failed to update</returns>
+        public static bool UpdatePresent(PresentDay present)
+        {
+            string dateEnd = present.TimeEnd.ToLocalTime().ToString("yyyy-MM-dd hh:mm:ssss");
+            string query = $"set @id=0;select max(presentDayId) into @id from presentday where id = {present.UserId} and projectId ={present.ProjectId}; UPDATE `managertasks`.`presentday`SET`timeEnd` = '{dateEnd}' WHERE presentDayId = @id and id ={present.UserId} and projectId = {present.ProjectId}";
+            return DBAccess.RunNonQuery(query) != null;
+        }
+
+        /// <summary>
+        /// Add pressent
+        /// </summary>
+        /// <param name="presentDay">presentDay- contain idUser, idProject, dateBegin </param>
+        /// <returns></returns>
+        public static bool AddPresent(PresentDay presentDay)
+        {
+            string dateBegin = presentDay.TimeBegin.ToLocalTime().ToString("yyyy-MM-dd hh:mm:ssss");
+            string dateEnd = presentDay.TimeEnd.ToLocalTime().ToString("yyyy-MM-dd hh:mm:ssss");
+            string query = $"INSERT INTO `managertasks`.`PresentDay`(`timeBegin`,`timeEnd`,`projectId`,`id`) VALUES('{dateBegin}','{dateEnd}',{presentDay.ProjectId},{presentDay.UserId}); ";
+            return DBAccess.RunNonQuery(query) == 1;
+        }
+    }
+}
+
+using _00_DAL;
+using BOL;
+using BOL.Convertors;
+using BOL.HelpModel;
+using BOL.Models;
+using MySql.Data.MySqlClient;
+using System;
+using System.Collections.Generic;
+using System.Configuration;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Timers;
+
+namespace BLL
+{
+    public class LogicProjects
+    {
+        public static int index = 100;
+
+        /// <summary>
+        /// Gets all projects
+        /// </summary>
+        /// <returns>List<Project> all projects</returns>
+        public static List<Project> GetAllProjects()
+        {
+            string query = $"SELECT p.*,u.* FROM managertasks.project p join user u on u.id=p.managerId";
+
+            Func<MySqlDataReader, List<Project>> func = (reader) =>
+            {
+                List<Project> projects = new List<Project>();
+                while (reader.Read())
+                {
+                    projects.Add(ConvertProject.convertDBtoProjectsWithManager(reader));
+                }
+                return projects;
+            };
+            List<Project> allProjects = DBAccess.RunReader(query, func);
+            allProjects.ForEach(p =>
+            {
+                p.HoursForDepartment = GetHoursDepartmentsProject(p.ProjectId);
+            });
+            return allProjects;
+        }
+
+        /// <summary>
+        /// Gets hours and worker for departments project
+        /// </summary>
+        /// <param name="projectId">idProject</param>
+        /// <returns>List<HourForDepartment>-HourForDepartment </returns>
+        public static List<HourForDepartment> GetHoursDepartmentsProject(int projectId)
+        {
+            string query = $"SELECT * FROM managertasks.hourfordepartment h join department d on d.id=h.departmentId where projectId={projectId};";
+            Func<MySqlDataReader, List<HourForDepartment>> func = (reader) =>
+            {
+                List<HourForDepartment> hoursDepartments = new List<HourForDepartment>();
+                while (reader.Read())
+                {
+                    hoursDepartments.Add(ConvertDepartment.ConvertToHoursDepartmentProject(reader));
+                }
+                return hoursDepartments;
+            };
+            List<HourForDepartment> departmentsProject = DBAccess.RunReader(query, func);
+            departmentsProject.ForEach(h =>
+            {
+                h.WorkersInDepartment = GetWorkersByDepartmentAndProject(h.DepartmentId, projectId);
+            });
+            return (departmentsProject.Count() != 0 ? departmentsProject : new List<HourForDepartment>());
+        }
+
+        /// <summary>
+        /// Gets project details
+        /// </summary>
+        /// <param name="projectId">projectId</param>
+        /// <returns>Project</returns>
+        public static Project GetProjectDetails(int projectId)
+        {
+            string query = $"SELECT * FROM managetasks.project WHERE projectId={projectId}";
+            Func<MySqlDataReader, List<Project>> func = (reader) =>
+            {
+                List<Project> projects = new List<Project>();
+                while (reader.Read())
+                {
+                    projects.Add(ConvertProject.convertDBtoProjects(reader));
+                    projects.Last().HoursForDepartment = GetHoursDepartmentsProject(reader.GetInt32(0));
+                }
+                return projects;
+            };
+
+            return (DBAccess.RunReader(query, func).Count() != 0 ? DBAccess.RunReader(query, func)[0] : null);
+
+        }
+
+        /// <summary>
+        /// Remove project
+        /// </summary>
+        /// <param name="projectId">projectId</param>
+        /// <returns>bool true-succsess remove, false-failed remove</returns>
+        public static bool RemoveProject(int projectId)
+        {
+            string query = $"DELETE FROM `managertasks`.`project`WHERE projectId ={projectId}";
+            return DBAccess.RunNonQuery(query) != null;
+        }
+
+        /// <summary>
+        /// Update Project
+        /// </summary>
+        /// <param name="project">project</param>
+        /// <returns>bool true-succsess update, false-failed update</returns>
+        public static bool UpdateProject(Project project)
+        {
+            int finish = project.IsFinish ? 1 : 0;
+            string query = $"UPDATE managertasks.project SET numHour='{project.NumHourForProject}',name='{project.ProjectName}',dateBegin='{project.DateBegin.ToString("yyyy-MM-dd")}' ,dateEnd='{project.DateEnd.ToString("yyyy-MM-dd")}' ,isFinish=b'{finish}',customerName='{project.CustomerName}'  WHERE projectId={project.ProjectId} ";
+            if (DBAccess.RunNonQuery(query) != null)
+            {
+                foreach (var hoursDepartment in project.HoursForDepartment)
+                {
+                    if (UpdateHoursDepartmentForProject(hoursDepartment, project.ProjectId) == false)
+                    {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Update hours for departments project
+        /// </summary>
+        /// <param name="hourForDepartment">hourForDepartment- contain idDepartment, idProject, numHours</param>
+        /// <param name="projectId">bool true-succsess update, false-failed update</param>
+        /// <returns></returns>
+        public static bool UpdateHoursDepartmentForProject(HourForDepartment hourForDepartment, int projectId)
+        {
+            string query = $"UPDATE  `managertasks`.`hourfordepartment` set sumHours={hourForDepartment.SumHours}  where departmentId={hourForDepartment.DepartmentId}  and projectId={projectId}";
+            return DBAccess.RunNonQuery(query) != null;
+        }
+
+        /// <summary>
+        /// Update status Project
+        /// </summary>
+        /// <param name="projectId">projectId</param>
+        /// <returns>bool true-succsess update, false-failed update</returns>
+        public static bool UpdateStatusProject(int projectId)
+        {
+            string query = $"UPDATE managetasks.project SET  isFinish='{true}'  WHERE id={projectId} ";
+            return DBAccess.RunNonQuery(query) != null;
+        }
+
+        /// <summary>
+        /// Add worker to project
+        /// </summary>
+        /// <param name="projectId">idProject</param>
+        /// <param name="workers">List<ProjectWorker> contain list of userId, HoursForProject</param>
+        /// <returns>bool true-succsess added, false-failed added</returns>
+        public static bool AddWorkerToProject(int projectId, List<ProjectWorker> workers)
+        {
+            foreach (var item in workers)
+            {
+                string query = $"INSERT INTO `managertasks`.`projectworker`(`projectId`,`hoursForProject`,`id`)VALUES({ projectId},{item.HoursForProject},{ item.UserId }); ";
+                if (DBAccess.RunNonQuery(query) == null)
+                    return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Add project
+        /// </summary>
+        /// <param name="project">project</param>
+        /// <returns>bool true-succsess added, false-failed added</returns>
+        public static bool AddProject(Project project)
+        {
+            string dateBegin = project.DateBegin.ToString("yyyy-MM-dd");
+            string dateEnd = project.DateEnd.ToString("yyyy-MM-dd");
+            int IsFinish = project.IsFinish ? 1 : 0;
+
+            string query = $"start transaction; INSERT INTO `managertasks`.`project`(`numHour`,`name`,`dateBegin`,`dateEnd`,`isFinish`,`customerName`,`managerId`) VALUES({project.NumHourForProject},'{project.ProjectName}','{dateBegin}','{dateEnd}',{IsFinish},'{project.CustomerName}',{project.IdManager}); ";
+            foreach (var item in project.HoursForDepartment)
+            {
+                query += $" SET @EE=0;SELECT MAX(projectId) FROM project INTO @EE; INSERT INTO `managertasks`.`hourfordepartment`(`projectId`,`departmentId`,`sumHours`)VALUES(@EE,{item.DepartmentId},{item.SumHours});";
+            }
+            query += " commit;";
+            return DBAccess.RunNonQuery(query) != null;
+        }
+
+        /// <summary>
+        ///Send email day before dead line
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        public static void sendEmailDateProjectEnd(object sender, ElapsedEventArgs e)
+        {
+            Func<MySqlDataReader, List<SendEmailEndProject>> func = (reader) =>
+            {
+                List<SendEmailEndProject> workerSendEmail = new List<SendEmailEndProject>();
+                while (reader.Read())
+                {
+                    workerSendEmail.Add(ConvertSendEmail.convertDBtoProjects(reader));
+                }
+                return workerSendEmail;
+            };
+            List<SendEmailEndProject> workerNotFinish = DBAccess.RunReader(func, "SendEmailEndProject", new List<string>(), new List<string>());
+            foreach (var item in workerNotFinish)
+            {
+                string message = $"Hi {item.UserName}<br/> the project {item.nameProject} the deadline tommorow You did {item.HourDo} from {item.hoursForProject}, You stay to do {item.stayToDo} hours ";
+                LogicManager.SendEmail(item.EmailManager, item.EmailUser, "end dead line", message);
+            }
+            var d = workerNotFinish.GroupBy(p => p.EmailManager);
+            foreach (var item in d)
+            {
+                string message = "";
+                item.ToList().ForEach(user =>
+                {
+                    message += user.UserName + " ";
+                });
+                LogicManager.SendEmail("c0556777462@gmail.com", item.Key, "end dead line", message);
+            }
+        }
+
+        /// <summary>
+        /// Dead line send email -run task that happen every day
+        /// </summary>
+        /// <returns></returns>
+        public static async Task DeadLineEmail()
+        {
+            // Set up a timer that triggers every day.
+            System.Timers.Timer timer = new System.Timers.Timer();
+            timer.Interval = 60000;
+
+            timer.Elapsed += new ElapsedEventHandler(sendEmailDateProjectEnd);
+
+            string time = ConfigurationManager.AppSettings["deadLineEmailHour"];
+            int hour = int.Parse(time.Split(':')[0]);
+            int minute = int.Parse(time.Split(':')[1]);
+
+            DateTime currentDateTime = DateTime.Now;
+            DateTime dateTimeToStart = currentDateTime.Date + new TimeSpan(hour, minute, 0);
+            if (dateTimeToStart < currentDateTime)
+                dateTimeToStart = dateTimeToStart.AddDays(1);
+            TimeSpan timeout = dateTimeToStart - currentDateTime;
+            Thread.Sleep(timeout);
+            timer.Start();
+        }
+
+        /// <summary>
+        /// Create report WorkerReport
+        /// </summary>
+        /// <param name="viewName">viewName </param>
+        /// <returns>List<ReportWorker></returns>
+        public static List<ReportWorker> CreateReportsWorker(string viewName)
+        {
+            Func<MySqlDataReader, List<ReportWorker>> func = (reader) =>
+            {
+                List<ReportWorker> reportWorker = new List<ReportWorker>();
+                while (reader.Read())
+                {
+                    reportWorker.Add(ConvertReport.ConvertDBtoReportWorker(reader));
+                }
+                return reportWorker;
+            };
+
+            List<ReportWorker> reportWorkers = DBAccess.RunReader(func, "report", new List<string>() { viewName }, new List<string>() { "viewName" });
+            reportWorkers.ForEach(r =>
+            {
+                r.ParentId = 0;
+                r.Items = GetReportWorkerDetailsById(r.Id);
+            });
+
+            return reportWorkers;
+        }
+
+        /// <summary>
+        /// Gets report worker details- create report with self reference
+        /// </summary>
+        /// <param name="idWorker">idUser</param>
+        /// <returns>List<ReportWorker>-</returns>
+        public static List<ReportWorker> GetReportWorkerDetailsById(int idWorker)
+        {
+            Func<MySqlDataReader, List<ReportWorker>> func = (reader) =>
+            {
+                List<ReportWorker> reportWorker = new List<ReportWorker>();
+                while (reader.Read())
+                {
+                    ReportWorker reportWorker1 = ConvertReport.ConvertDBtoWorkersReport(reader);
+                    reportWorker1.Id = index++;
+                    reportWorker1.ParentId = idWorker;
+                    reportWorker.Add(reportWorker1);
+                }
+                return reportWorker;
+            };
+            return DBAccess.RunReader(func, "reportWorker", new List<string>() { idWorker.ToString() }, new List<string>() { "idWorker" });
+
+        }
+
+        /// <summary>
+        /// Create report WorkerReport
+        /// </summary>
+        /// <param name="viewName">viewName </param>
+        /// <returns>List<ReportWorker></returns>
+        public static List<ReportProject> CreateReportsProject(string viewName)
+        {
+
+            Func<MySqlDataReader, List<ReportProject>> func = (reader) =>
+            {
+                List<ReportProject> reportProject = new List<ReportProject>();
+                while (reader.Read())
+                {
+                    reportProject.Add(ConvertReport.ConvertDBtoReport(reader));
+                }
+                return reportProject;
+            };
+            List<ReportProject> reportProjects = DBAccess.RunReader(func, "report", new List<string>() { viewName }, new List<string>() { "viewName" });
+            foreach (var item in reportProjects)
+            {
+                item.Items = GetDepartmentsWorkersProject(item.Id);
+            }
+
+            return reportProjects;
+        }
+
+        /// <summary>
+        /// Gets department to reportProject
+        /// </summary>
+        /// <param name="id">idProject</param>
+        /// <returns>List<ReportProject></returns>
+        private static List<ReportProject> GetDepartmentsWorkersProject(int id)
+        {
+            Func<MySqlDataReader, List<ReportProject>> func = (reader) =>
+            {
+                List<ReportProject> reportProject = new List<ReportProject>();
+                while (reader.Read())
+                {
+                    reportProject.Add(ConvertReport.ConvertDBtoDepartment(reader));
+                }
+                return reportProject;
+            };
+            List<ReportProject> departmentProjects = DBAccess.RunReader(func, "departmensProject", new List<string>() { id.ToString() }, new List<string>() { "Id" });
+            foreach (var item in departmentProjects)
+            {
+                item.Items = GetWorkersByDepartmentAndProject(item.Id, id);
+                item.SumHoursDo = item.Items.Sum(p => p.SumHoursDo);
+            }
+            return departmentProjects;
+        }
+
+        /// <summary>
+        /// Gets workers to departments project
+        /// </summary>
+        /// <param name="idDepartment">idDepartment</param>
+        /// <param name="idProject">idProject</param>
+        /// <returns></returns>
+        private static List<ReportProject> GetWorkersByDepartmentAndProject(int idDepartment, int idProject)
+        {
+            string query = $"SELECT * FROM managertasks.sumhoursforuserproject WHERE projectId={idProject} and departmentUserId={idDepartment}";
+            Func<MySqlDataReader, List<ReportProject>> func = (reader) =>
+            {
+                List<ReportProject> workersReport = new List<ReportProject>();
+                while (reader.Read())
+                {
+                    workersReport.Add(ConvertReport.ConvertDBtoWorkerInReport(reader));
+
+                }
+                return workersReport;
+            };
+
+            return DBAccess.RunReader(query, func);
+        }
+
+    }
+}
+
+using _00_DAL;
+using BOL;
+using BOL.Convertors;
+using BOL.Models;
+using MySql.Data.MySqlClient;
+using System;
+using System.Collections.Generic;
+
+namespace BLL
+{
+    public class LogicProjectWorker
+    {
+        /// <summary>
+        /// Update worker in project
+        /// </summary>
+        /// <param name="projectWorker">projectWorker contain -idUser, idProject, HoursForProject </param>
+        /// <returns>bool true-succsess update, false-failed update</returns>
+        public static bool UpdateProjectWorker(ProjectWorker projectWorker)
+        {
+            string query = $"UPDATE managertasks.projectworker SET `hoursForProject` = {projectWorker.HoursForProject}  WHERE id={projectWorker.UserId} and projectId ={projectWorker.ProjectId}  ";
+            return DBAccess.RunNonQuery(query) == 1;
+        }
+
+        /// <summary>
+        /// Gets workers not in this project
+        /// </summary>
+        /// <param name="projectId">idProject</param>
+        /// <returns></returns>
+        public static List<User> GetWorkerNotInProject(int projectId)
+        {
+            string query = $"SELECT * FROM managertasks.user WHERE departmentUserId>2 and id not in(SELECT id FROM projectworker WHERE projectId={projectId}) GROUP BY id";
+            Func<MySqlDataReader, List<User>> func = (reader) =>
+            {
+                List<User> userNotInProject = new List<User>();
+                while (reader.Read())
+                {
+                    userNotInProject.Add(ConvertorUser.convertDBtoUser(reader));
+                }
+                return userNotInProject;
+            };
+            return DBAccess.RunReader(query, func);
+        }
+
+        /// <summary>
+        /// Gets worker in this project
+        /// </summary>
+        /// <param name="projectId">idProject</param>
+        /// <returns>List<User> - users in this project</returns>
+        public static List<User> GetWorkerInProject(int projectId)
+        {
+            string query = $"SELECT u.*, d.* FROM managertasks.user u JOIN managertasks.department d  ON u.departmentUserId = d.id join projectworker p on u.id = p.id where p.projectId = {projectId }";
+
+            Func<MySqlDataReader, List<User>> func = (reader) =>
+            {
+                List<User> userInProject = new List<User>();
+                while (reader.Read())
+                {
+                    userInProject.Add(ConvertorUser.convertDBtoUserWithDepartment(reader));
+                }
+                return userInProject;
+            };
+            return DBAccess.RunReader(query, func);
+        }
+
+        /// <summary>
+        /// Get sum hours stay to department
+        /// </summary>
+        /// <param name="departmentId">Department id</param>
+        /// <param name="idProject">Project id</param>
+        /// <returns></returns>
+        public static List< decimal> GetSumStayByProjectAndDepartment(int idProject)
+        {
+            string query = $"SELECT h.sumHours-sum(pw.hoursForProject) from project p join hourfordepartment h on p.projectId = h.projectId join projectworker pw on pw.projectId = p.projectId where p.projectId = {idProject} group by h.departmentId";
+            Func<MySqlDataReader, List<decimal>> func = (reader) =>
+            {
+                List<decimal> userInProject = new List<decimal>();
+                while (reader.Read())
+                {
+                    userInProject.Add(reader.GetDecimal(0));
+                }
+                return userInProject;
+            };
+            return DBAccess.RunReader(query, func);
+        }
+
+        /// <summary>
+        /// Gets the users under the team leader
+        /// </summary>
+        /// <param name="teamleaderId">teamleaderId</param>
+        /// <returns>List<User></returns>
+        public static List<User> GetUsersOfTeamLeader(int teamleaderId)
+        {
+            string query = $"SELECT u.*, d.* FROM managertasks.user u LEFT JOIN managertasks.department d  ON u.departmentUserId = d.id LEFT join USER uu on uu.id = u.managerId where u.managerId={teamleaderId}";
+
+            Func<MySqlDataReader, List<User>> func = (reader) =>
+            {
+                List<User> users = new List<User>();
+                while (reader.Read())
+                {
+                    users.Add(ConvertorUser.convertDBtoUser(reader));
+                }
+                return users;
+            };
+            return DBAccess.RunReader(query, func);
+        }
+
+    }
+}
+
+
+```
+### API
+  * Controllers
+```csharp
+using BLL;
+using System.Net;
+using System.Net.Http;
+using System.Web.Http;
+
+namespace webAPI_tasks.Controllers
+{
+    public class DepartmentController : ApiController
+    {
+        [HttpGet]
+        [Route("api/Department/getAllDepartments")]
+        public HttpResponseMessage Get()
+        {
+            return Request.CreateResponse(HttpStatusCode.OK, LogicManager.GetAllDepartments());
+        }
+    }
+}
+
+using BLL;
+using BOL.Models;
+using System;
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Formatting;
+using System.Web.Http;
+
+namespace webAPI_tasks.Controllers
+{
+    public class PresentDayController : ApiController
+    {
+      
+        [HttpPost]
+        [Route("api/AddPresent")]
+        public HttpResponseMessage Post([FromBody]PresentDay value)
+        {
+            if (ModelState.IsValid)
+            {
+                return (LogicPresentDay.AddPresent(value)) ?
+                   new HttpResponseMessage(HttpStatusCode.Created) :
+                   new HttpResponseMessage(HttpStatusCode.BadRequest)
+                   {
+                       Content = new ObjectContent<String>("Can not add to DB", new JsonMediaTypeFormatter())
+                   };
+            };
+            return Request.CreateResponse(HttpStatusCode.BadRequest, BaseLogic.GetErorList(ModelState.Values));
+        }
+
+       
+        [HttpPut]
+        [Route("api/updatePresentDay")]
+        public HttpResponseMessage Put([FromBody]PresentDay value)
+        {
+
+            if (ModelState.IsValid)
+            {
+                return (LogicPresentDay.UpdatePresent(value)) ?
+                    new HttpResponseMessage(HttpStatusCode.OK) :
+                    new HttpResponseMessage(HttpStatusCode.BadRequest)
+                    {
+                        Content = new ObjectContent<String>("Can not update in DB", new JsonMediaTypeFormatter())
+                    };
+            };
+           return Request.CreateResponse(HttpStatusCode.BadRequest, BaseLogic.GetErorList(ModelState.Values));
+        }
+
+    }
+}
+
+
+using BLL;
+using BOL;
+using BOL.Models;
+using System;
+using System.Collections.Generic;
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Formatting;
+using System.Web.Http;
+
+namespace webAPI_tasks.Controllers
+{
+    public class ProjectsController : ApiController
+    {
+        [HttpGet]
+        [Route("api/getAllProjects")]
+        public HttpResponseMessage GetAllProjects()
+        {
+            return Request.CreateResponse(HttpStatusCode.OK, LogicProjects.GetAllProjects());
+        }
+
+        [HttpPost]
+        [Route("api/addProject")]
+        public HttpResponseMessage AddProject([FromBody]Project value)
+        {
+            if (ModelState.IsValid)
+            {
+                return (LogicProjects.AddProject(value)) ?
+                   new HttpResponseMessage(HttpStatusCode.Created) :
+                   new HttpResponseMessage(HttpStatusCode.BadRequest)
+                   {
+                       Content = new ObjectContent<String>("Can not add to DB", new JsonMediaTypeFormatter())
+                   };
+            };
+
+            return Request.CreateResponse(HttpStatusCode.BadRequest, BaseLogic.GetErorList(ModelState.Values));
+        }
+
+        [HttpPut]
+        [Route("api/updateProject")]
+        public HttpResponseMessage UpdateProject([FromBody]Project value)
+        {
+            ModelState.Remove("value.DateBegin");
+            if (ModelState.IsValid)
+            {
+                bool b = LogicProjects.UpdateProject(value);
+                return (b) ?
+                    Request.CreateResponse(HttpStatusCode.OK, b) : 
+                    Request.CreateResponse(HttpStatusCode.BadRequest, "Can not update");
+                   
+            };
+            return Request.CreateResponse(HttpStatusCode.BadRequest, BaseLogic.GetErorList(ModelState.Values));
+        }
+
+        [HttpPut]
+        [Route("api/addWorkersToProject/{projectId}")]
+        public HttpResponseMessage AddWorkersToProject(int projectId, [FromBody]List<ProjectWorker> workers)
+        {
+           ModelState.Remove("projectId");
+
+            for (int i = 0;i <workers.Count; i++)
+            {
+                ModelState.Remove($"workers[{i}].User.ConfirmPassword");
+                ModelState.Remove($"workers[{i}].User.Password");
+                ModelState.Remove($"workers[{i}].User.Email");
+            }
+
+            if (ModelState.IsValid)
+            {
+                return (LogicProjects.AddWorkerToProject(projectId, workers)) ?
+                    new HttpResponseMessage(HttpStatusCode.OK) :
+                    new HttpResponseMessage(HttpStatusCode.BadRequest)
+                    {
+                        Content = new ObjectContent<String>("Can not update in DB", new JsonMediaTypeFormatter())
+                    };
+            };
+
+            return Request.CreateResponse(HttpStatusCode.BadRequest, BaseLogic.GetErorList(ModelState.Values));
+        }
+
+
+        [HttpDelete]
+        [Route("api/deleteProject/{projectId}")]
+        public HttpResponseMessage DeleteProject(int projectId)
+        {
+            return (LogicProjects.RemoveProject(projectId)) ?
+                    new HttpResponseMessage(HttpStatusCode.OK) :
+                    new HttpResponseMessage(HttpStatusCode.BadRequest)
+                    {
+                        Content = new ObjectContent<String>("Can not remove from DB", new JsonMediaTypeFormatter())
+                    };
+        }
+
+
+        [HttpGet]
+        [Route("api/createReport/{idReport}")]
+        public HttpResponseMessage CreateReports([FromUri]int idReport)
+        {
+            string viewName = "";
+            switch (idReport)
+            {
+                case 1:
+                    viewName = "reportProject";
+                    return Request.CreateResponse(HttpStatusCode.OK, LogicProjects.CreateReportsProject(viewName));
+                default:
+                    viewName = "reportWorker";
+                    return Request.CreateResponse(HttpStatusCode.OK, LogicProjects.CreateReportsWorker(viewName));
+            }
+
+            
+        }
+    }
+}
+
+
+using BLL;
+using BOL.Models;
+using System;
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Formatting;
+using System.Web.Http;
+
+namespace webAPI_tasks.Controllers
+{
+    public class ProjectWorkerController : ApiController
+    {
+
+        [HttpPut]
+        [Route("api/updateProjectHours")]
+        public HttpResponseMessage UpdateProjectHours([FromBody]ProjectWorker value)
+        {
+            ModelState.Remove("value.User.Password");
+            ModelState.Remove("value.User.ConfirmPassword");
+            ModelState.Remove("value.User.Email");
+            if (ModelState.IsValid)
+            { 
+                return (LogicProjectWorker.UpdateProjectWorker(value)) ?
+                   Request.CreateResponse(HttpStatusCode.OK,true) :
+                    new HttpResponseMessage(HttpStatusCode.BadRequest)
+                    {
+                        Content = new ObjectContent<String>("Can not update in DB", new JsonMediaTypeFormatter())
+                    };
+            };
+            return Request.CreateResponse(HttpStatusCode.BadRequest, BaseLogic.GetErorList(ModelState.Values));
+        }
+
+        [HttpGet]
+        [Route("api/getWorkerNotProject/{projectId}")]
+        public HttpResponseMessage GetetWorkerNotProject(int projectId)
+        {
+            return Request.CreateResponse(HttpStatusCode.OK, LogicProjectWorker.GetWorkerNotInProject(projectId));
+        }
+
+        [HttpGet]
+        [Route("api/getWorkerInProject/{projectId}")]
+        public HttpResponseMessage GetWorkerInProject(int projectId)
+        {
+            return Request.CreateResponse(HttpStatusCode.OK, LogicProjectWorker.GetWorkerInProject(projectId));
+        }
+
+        [HttpGet]
+        [Route("api/getUsersTeamLeaderProject/{teamleaderId}/{idProject}")]
+        public HttpResponseMessage GetUsersTeamLeaderProject(int teamleaderId,int idProject)
+        {
+            return Request.CreateResponse(HttpStatusCode.OK, LogicManager.GetWorkerHourDoProjects(teamleaderId, idProject));
+        }
+
+        [HttpGet]
+        [Route("api/getSumStayByProjectAndDepartment/{idProject}")]
+        public HttpResponseMessage GetSumStayByProjectAndDepartment(int idProject)
+        {
+            return Request.CreateResponse(HttpStatusCode.OK, LogicProjectWorker.GetSumStayByProjectAndDepartment(idProject));
+        }
+
+    }
+}
+
+
+using BOL;
+using BLL;
+using System;
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Formatting;
+using System.Web.Http;
+using BOL.HelpModel;
+using System.Web;
+
+namespace webAPI_tasks.Controllers
+{
+    public class UsersController : ApiController
+    {
+        [HttpGet]
+        [Route("api/Users/getAllUsers")]   
+        public HttpResponseMessage GetAllUsers()
+        {
+            return Request.CreateResponse(HttpStatusCode.OK, LogicManager.GetAllUsers());
+        
+        }
+
+        //managers or teamleaders
+        [HttpGet]
+        [Route("api/Users/getUsersByDepartment/{departmentName}")]
+        public HttpResponseMessage GetUserByDepartment(string departmentName)
+        {
+            return Request.CreateResponse(HttpStatusCode.OK, LogicManager.GetUserByDepartment(departmentName));
+          
+        }
+
+        //get all the workers that belong to a specific project
+        [HttpGet]
+        [Route("api/Users/getUserBelongProject/{projectId}")]
+        public HttpResponseMessage GetUserBelongProject(int projectId)
+        {
+            return Request.CreateResponse(HttpStatusCode.OK, LogicManager.GetUsersBelongProjects(projectId));
+
+        }
+ 
+        //get all the workers that belong to a specfic teamleader
+        [HttpGet]
+        [Route("api/getUsersOfTeamLeader/{teamleaderId}")]
+        public HttpResponseMessage GetUsersOfTeamLeader(int teamleaderId)
+        {
+            var x = LogicProjectWorker.GetUsersOfTeamLeader(teamleaderId);
+            return Request.CreateResponse(HttpStatusCode.OK, x);
+        }
+
+        [HttpGet]
+        [Route("api/getSumHoursDoneForUsers/{teamleaderId}/{projctId}")]
+        public HttpResponseMessage GetSumHoursDoneForUsers( int teamleaderId, int projctId)
+        {
+            return Request.CreateResponse(HttpStatusCode.OK, LogicManager.GetSumHoursDoneForUsers(teamleaderId, projctId));
+        }
+
+        [HttpGet]
+        [Route("api/Users/getHoursForUserProjects/{userId}")]
+        public HttpResponseMessage GetHoursForUserProjects(int userId)
+        {
+            return Request.CreateResponse(HttpStatusCode.OK, LogicManager.GetHoursForUserProjects(userId));
+        }
+
+        [HttpGet]
+        [Route("api/Users/getHoursAndProjectForUser/{userId}")]
+        public HttpResponseMessage GetHoursAndProjectForUser(int userId)
+        {
+            return Request.CreateResponse(HttpStatusCode.OK, LogicManager.GetHoursAndProjectForUser(userId));
+        }
+
+        //GET simple workers
+        [HttpGet]
+        [Route("api/Users/getWorkers")]
+        public HttpResponseMessage GetWorkers()
+        {
+          return Request.CreateResponse(HttpStatusCode.OK, LogicManager.GetWorkers());
+        }
+     
+        //get user Project
+        [HttpGet]
+        [Route("api/getProjectsById/{id}")]
+        public HttpResponseMessage GetProjectsById(int id)
+        {
+            return Request.CreateResponse(HttpStatusCode.OK, LogicManager.GetProjectsUser(id));
+        }
+
+        //get projects of teamleader
+        [HttpGet]
+        [Route("api/getProjectsManager/{id}")]
+        public HttpResponseMessage GetProjectsManager(int id)
+        {
+          return  Request.CreateResponse(HttpStatusCode.OK, LogicManager.GetProjectsManager(id)); 
+        }
+
+        //add new user
+        [HttpPost]
+        [Route("api/addUser")]
+        public HttpResponseMessage AddUser([FromBody]User value)
+        {
+           
+            if (ModelState.IsValid)
+            {
+                return (LogicManager.AddUser(value)) ?
+                   new HttpResponseMessage(HttpStatusCode.Created) :
+                   new HttpResponseMessage(HttpStatusCode.BadRequest)
+                   {
+                       Content = new ObjectContent<String>("Can not add to DB", new JsonMediaTypeFormatter())
+                   };
+            };
+            return Request.CreateResponse(HttpStatusCode.BadRequest, BaseLogic.GetErorList(ModelState.Values));
+        }
+
+        [HttpPost]
+        [Route("api/loginByPassword")]
+        public HttpResponseMessage LoginByPassword([FromBody]LoginUser value)
+        {
+            if (ModelState.IsValid)
+            {
+                User user = LogicManager.GetUserDetailsByPassword(value);
+                return (user != null ?Request.CreateResponse(HttpStatusCode.OK,user):
+
+                   new HttpResponseMessage(HttpStatusCode.BadRequest)
+                   {
+                       Content = new ObjectContent<String>("Erorr during login", new JsonMediaTypeFormatter())
+                   });
+            };
+            return Request.CreateResponse(HttpStatusCode.BadRequest, BaseLogic.GetErorList(ModelState.Values));
+        }
+
+        [HttpPost]
+        [Route("api/LoginByComputerUser")]
+        public HttpResponseMessage LoginByComputerUser()
+        {
+            string ip = HttpContext.Current.Request.Form["ip"];
+            User user = LogicManager.GetUserDetailsComputerUser(ip);
+            if(user!=null)
+               return Request.CreateResponse(HttpStatusCode.OK, user);
+            else return Request.CreateResponse(HttpStatusCode.BadRequest);
+        }
+
+        [HttpPost]
+        [Route("api/ForgetPassword")]
+        public HttpResponseMessage ForgetPassword()
+        {
+            string userName = HttpContext.Current.Request.Form["userName"];
+            bool isConfirmPassword = LogicManager.ForgetPassword(userName);
+            if (isConfirmPassword == true)
+                return Request.CreateResponse(HttpStatusCode.OK, "send email with link to change password");
+            return Request.CreateResponse(HttpStatusCode.BadRequest, "User does not exist");
+        }
+
+        // updateUser
+        [HttpPut]
+        [Route("api/updateUser")]
+        public HttpResponseMessage UpdateUser([FromBody]User value)
+        {
+            ModelState.Remove("value.ConfirmPassword");
+            ModelState.Remove("value.Password");
+            ModelState.Remove("value.Manager.ConfirmPassword");
+            ModelState.Remove("value.Manager.Password");
+            if (ModelState.IsValid)
+            {
+                return (LogicManager.UpdateUser(value)) ?
+                    new HttpResponseMessage(HttpStatusCode.OK) :
+                    new HttpResponseMessage(HttpStatusCode.BadRequest)
+                    {
+                        Content = new ObjectContent<String>("Can not update in DB", new JsonMediaTypeFormatter())
+                    };
+            };
+            return Request.CreateResponse(HttpStatusCode.BadRequest, BaseLogic.GetErorList(ModelState.Values));
+        }
+
+        [HttpDelete]
+        [Route("api/deleteUser/{id}")]
+        public HttpResponseMessage DeleteUser(int id)
+        {
+            return (LogicManager.RemoveUser(id)) ?
+                    new HttpResponseMessage(HttpStatusCode.OK) :
+                    new HttpResponseMessage(HttpStatusCode.BadRequest)
+                    {
+                        Content = new ObjectContent<String>("Can not remove from DB", new JsonMediaTypeFormatter())
+                    };
+        }
+
+        [HttpPut]
+        [Route("api/sendMessageToManagers/{idUser}")]
+        public HttpResponseMessage SendMessageToManagers(int idUser, [FromBody] SendEmail message)
+        {
+            return (LogicManager.SendMessageToManagers(idUser, message)) ?
+                    new HttpResponseMessage(HttpStatusCode.OK) :
+                    new HttpResponseMessage(HttpStatusCode.BadRequest)
+                    {
+                        Content = new ObjectContent<String>("Can not send Email", new JsonMediaTypeFormatter())
+                    };
+        }
+
+        //update new password
+        [HttpPut]
+        [Route("api/ChangePassword/{requestId}")]
+        public HttpResponseMessage ChangePassword(int requestId, [FromBody] LoginUser user)
+        {
+            bool isChange = LogicManager.ChangePassword(requestId, user);
+            if (isChange == true)
+                return Request.CreateResponse(HttpStatusCode.OK, isChange);
+            else return Request.CreateResponse(HttpStatusCode.BadRequest, isChange);  
+        }
+
+    }
+}
+
+```
      
      
 # Test api with `curl`
