@@ -638,6 +638,767 @@ namespace BOL.Models
 }
 
 ```
+
+ * Help Model
+```csharp
+
+using System.ComponentModel.DataAnnotations;
+
+
+namespace BOL.HelpModel
+{
+   public class LoginUser
+    {
+        [Required]
+        [MinLength(64),MaxLength(64)]
+        public string Password { get; set; }
+        [Required]
+        [MinLength(2), MaxLength(15)]
+        public string UserName { get; set; }
+        public string Ip { get; set; }
+    }
+}
+
+using System;
+using System.Collections.Generic;
+
+namespace BOL.HelpModel
+{
+    public class ReportProject
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public string CustomerName { get; set; }
+        public DateTime DateBegin { get; set; }
+        public DateTime DateEnd { get; set; }
+        public decimal TotalHours { get; set; }
+        public decimal SumHoursDo { get; set; }
+        public decimal PrecentsDone { get; set; }
+        public int Daysleft { get; set; }
+        public bool IsFinish { get; set; }
+        public string TeamLeader { get; set; }
+        public List<ReportProject> Items { get; set; } = new List<ReportProject>();
+    }
+}
+
+
+using System.Collections.Generic;
+
+namespace BOL.HelpModel
+{
+    public  class ReportWorker
+    {
+        public int Id { get; set; }
+        public int ParentId { get; set; }
+        public string Name { get; set; }
+        public string Department { get; set; }
+        public int Year { get; set; }
+        public int Month { get; set; }
+        public decimal TotalHours { get; set; }
+        public decimal SumHoursDoMonth { get; set; }
+        public decimal SumHoursDo { get; set; }
+        public decimal PrecentsDone { get; set; }
+        public string TeamLeader { get; set; }
+        public List<ReportWorker> Items { get; set; } = new List<ReportWorker>();
+    }
+}
+
+using System.ComponentModel.DataAnnotations;
+
+namespace BOL.HelpModel
+{
+    public  class SendEmail
+    {
+        public string Subject { get; set; }
+
+        [Required(ErrorMessage ="body of email required")]
+        [MinLength(2,ErrorMessage ="body contain less than two charecters")]
+        public string Body { get; set; }
+    }
+}
+
+
+namespace BOL.HelpModel
+{
+    public class SendEmailEndProject
+    {
+        public string UserName { get; set; }
+        public string EmailUser { get; set; }
+        public string nameProject { get; set; }
+        public string userNameManager { get; set; }
+        public string EmailManager { get; set; }
+        public decimal HourDo { get; set; }
+        public decimal hoursForProject { get; set; }
+        public decimal stayToDo { get; set; }
+    }
+}
+
+
+namespace BOL.HelpModel
+{
+    public  class SumHoursDoneUser
+    {
+        public string Label { get; set; }
+        public decimal Data { get; set; }
+    }
+}
+
+```
+
+ * Validation
+```csharp
+using System.ComponentModel.DataAnnotations;
+
+namespace BOL.Validations
+{
+    public class ConfirmPasswordAttribute:ValidationAttribute
+    {
+        protected override ValidationResult IsValid(object value, ValidationContext validationContext)
+        {
+            ValidationResult validationResult = ValidationResult.Success;
+            if (value == null)
+            {
+                return new ValidationResult("confirm password is required");
+            }
+            string password = (validationContext.ObjectInstance as User).Password;
+            if(password!=null)
+
+            if (value.Equals(password))
+                return null;
+            return new ValidationResult("confirm password not match to password");
+        }
+    }
+}
+
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+
+namespace BOL.Validations
+{
+    class UniqueEmailAttribute : ValidationAttribute
+    {
+        protected override ValidationResult IsValid(object value, ValidationContext validationContext)
+        {
+            ValidationResult validationResult = ValidationResult.Success;
+            try
+            {
+                //Take userId and email of the user parameter
+                int userId = (validationContext.ObjectInstance as User).UserId;
+                string email = value.ToString();
+
+                //Invoke method 'getAllUsers' from 'UserService' in 'BLL project' by reflection (not by adding reference!)
+
+                //1. Load 'BLL' project
+                Assembly assembly = Assembly.LoadFrom(Directory.GetParent(AppContext.BaseDirectory).Parent.FullName + @"\BLL\bin\Debug\BLL.dll");
+
+                //2. Get 'UserService' type
+                Type userServiceType = assembly.GetTypes().First(t => t.Name.Equals("LogicManager"));
+
+                //3. Get 'GetAllUsers' method
+                MethodInfo getAllUsersMethod = userServiceType.GetMethods().First(m => m.Name.Equals("GetAllUsers"));
+
+                //4. Invoke this method
+                List<User> users = getAllUsersMethod.Invoke(Activator.CreateInstance(userServiceType), new object[] { }) as List<User>;
+
+                //The result of this method is list of users
+
+                //check if email of the user parameter is unique
+                bool isUnique = users.Any(user => user.Email.Equals(email) && user.UserId != userId) == false;
+                if (isUnique == false)
+                {
+                    ErrorMessage = "email nust be unique";
+                    validationResult = new ValidationResult(ErrorMessageString);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            return validationResult;
+        }
+
+    }
+}
+
+
+
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+
+namespace BOL.Validations
+{
+    public class UniquePasswordAttribute : ValidationAttribute
+    {
+        protected override ValidationResult IsValid(object value, ValidationContext validationContext)
+        {
+            ValidationResult validationResult = ValidationResult.Success;
+            try
+            {
+                //Take userId and password of the user parameter
+                int userId = (validationContext.ObjectInstance as User).UserId;
+                if (value != null)
+                {
+                    string password = value.ToString();
+
+                    //Invoke method 'getAllUsers' from 'UserService' in 'BLL project' by reflection (not by adding reference!)
+
+                    //1. Load 'BLL' project
+                    Assembly assembly = Assembly.LoadFrom(Directory.GetParent(AppContext.BaseDirectory).Parent.FullName + @"\BLL\bin\Debug\BLL.dll");
+
+                    //2. Get 'UserService' type
+                    Type userServiceType = assembly.GetTypes().First(t => t.Name.Equals("LogicManager"));
+
+                    //3. Get 'GetAllUsers' method
+                    MethodInfo getAllUsersMethod = userServiceType.GetMethods().First(m => m.Name.Equals("PasswordUnique"));
+
+                    //4. Invoke this method
+                    bool isUnique = Convert.ToBoolean( getAllUsersMethod.Invoke(Activator.CreateInstance(userServiceType), new object[] { password })) ;
+
+                    //The result of this method is bool if exists this password
+                    if (isUnique == false)
+                    {
+                        ErrorMessage = "password must be unique";
+                        validationResult = new ValidationResult(ErrorMessageString);
+                    }
+                }
+                else
+                {
+                    ErrorMessage = "password required";
+                    validationResult = new ValidationResult(ErrorMessageString);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            return validationResult;
+        }
+
+    }
+}
+
+
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+
+namespace BOL.Validations
+{
+    class UniqueProjectNameAttribute : ValidationAttribute
+    {
+        protected override ValidationResult IsValid(object value, ValidationContext validationContext)
+        {
+            ValidationResult validationResult = ValidationResult.Success;
+            try
+            {
+                //Take userId and ProjectName of the user parameter
+                int projectId = (validationContext.ObjectInstance as Project).ProjectId;
+                string projectName = value.ToString();
+
+                //Invoke method 'GetAllProjects' from 'LogicProjects' in 'BLL project' by reflection (not by adding reference!)
+
+                //1. Load 'BLL' project
+                Assembly assembly = Assembly.LoadFrom(Directory.GetParent(AppContext.BaseDirectory).Parent.FullName + @"\BLL\bin\Debug\BLL.dll");
+
+
+                //2. Get 'UserService' type
+                Type userServiceType = assembly.GetTypes().First(t => t.Name.Equals("LogicProjects"));
+
+                //3. Get 'GetAllUsers' method
+                MethodInfo getAllProjectsMethod = userServiceType.GetMethods().First(m => m.Name.Equals("GetAllProjects"));
+
+                //4. Invoke this method
+                List<Project> projects = getAllProjectsMethod.Invoke(Activator.CreateInstance(userServiceType), new object[] { }) as List<Project>;
+
+                //The result of this method is list of users
+
+                if (projects == null)
+                    return validationResult;
+                bool isUnique = projects.Any(project => project.ProjectName.Equals(projectName) && project.ProjectId != projectId) == false;
+                if (isUnique == false)
+                {
+                    ErrorMessage = "project name must be unique";
+                    validationResult = new ValidationResult(ErrorMessageString);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            return validationResult;
+        }
+
+
+    }
+}
+
+
+using System;
+using System.ComponentModel.DataAnnotations;
+
+namespace BOL.Validations
+{
+    public class ValidDateTimeBeginAttribute : ValidationAttribute
+    {
+        protected override ValidationResult IsValid(object value, ValidationContext validationContext)
+        {
+            ValidationResult validationResult = ValidationResult.Success;
+
+            if (DateTime.Parse(value.ToString()).Date >= (DateTime.Parse(DateTime.Now.ToString()).Date))
+                return null;
+            return new ValidationResult("date begin project less than today");
+        }
+
+    }
+}
+
+
+using System;
+using System.ComponentModel.DataAnnotations;
+
+namespace BOL.Validations
+{
+    class ValidDateTimeEndAttribute : ValidationAttribute
+    {
+        protected override ValidationResult IsValid(object value, ValidationContext validationContext)
+        {
+            ValidationResult validationResult = ValidationResult.Success;
+
+            //Take userId and email of the user parameter
+            DateTime dateBegin = (validationContext.ObjectInstance as Project).DateBegin;
+
+            if (dateBegin >= DateTime.Parse(value.ToString()))
+            {
+                ErrorMessage = "date end project grate than date begin project";
+                validationResult = new ValidationResult(ErrorMessageString);
+            }
+
+            return validationResult;
+        }
+
+    }
+}
+
+
+using BOL.Models;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace BOL.Validations
+{
+    class ValidDateTodayAttribute: ValidationAttribute
+    {
+        protected override ValidationResult IsValid(object value, ValidationContext validationContext)
+        {
+            ValidationResult validationResult = ValidationResult.Success;
+
+            if (DateTime.Parse(value.ToString())>DateTime.Now.AddMinutes(60))
+            {
+                ErrorMessage = "date pressent grate than now";
+                validationResult = new ValidationResult(ErrorMessageString);
+            }
+
+            return validationResult;
+        }
+    }
+}
+
+```
+  * Convertors
+```csharp
+using BOL.Models;
+using MySql.Data.MySqlClient;
+
+namespace BOL.Convertors
+{
+    public class ConvertDepartment
+    {
+
+        public static DepartmentUser convertDBtoDepartment(MySqlDataReader readerRow)
+        {
+            return new DepartmentUser()
+            {
+                Id = readerRow.GetInt32(0),
+                Department = readerRow.GetString(1)
+            };
+        }
+
+
+        public static HourForDepartment ConvertToHoursDepartmentProject(MySqlDataReader readerRow)
+        {
+            return new HourForDepartment()
+            {
+                ProjectId = readerRow.GetInt32(0),
+                DepartmentId = readerRow.GetInt32(1),
+                SumHours = readerRow.GetInt32(2),
+                DepartmentUser = new DepartmentUser()
+                {
+                    Department = readerRow.GetString(4)
+                }
+            };
+        }
+    }
+}
+
+using MySql.Data.MySqlClient;
+
+namespace BOL.Convertors
+{
+    public class ConvertorUser
+    {
+
+        public static User convertDBtoUserWithManager(MySqlDataReader readerRow)
+        {
+            return new User()
+            {
+                UserId = readerRow.GetInt32(0),
+                UserName = readerRow.GetString(1),
+                UserComputer = readerRow.IsDBNull(2) ? "" : readerRow.GetString(2),
+                DepartmentId = readerRow.GetInt32(4),
+                Email = readerRow.GetString(5),
+                NumHoursWork = readerRow.GetDecimal(6),
+                ManagerId = readerRow.IsDBNull(7) ? 0 : readerRow.GetInt32(7),
+                DepartmentUser = new Models.DepartmentUser()
+                {
+                    Id = readerRow.GetInt32(8),
+                    Department = readerRow.GetString(9)
+                }
+               ,
+                Manager = new User()
+                {
+                    UserId = readerRow.IsDBNull(10) ? 0 : readerRow.GetInt32(10),
+                    UserName = readerRow.IsDBNull(11) ? string.Empty : readerRow.GetString(11),
+                    Email = readerRow.IsDBNull(15) ? string.Empty : readerRow.GetString(15)
+                }
+            };
+        }
+
+
+        public static User convertDBtoUser(MySqlDataReader readerRow)
+        {
+            return new User()
+            {
+                UserId = readerRow.GetInt32(0),
+                UserName = readerRow.GetString(1),
+                UserComputer = readerRow.IsDBNull(2) ? "" : readerRow.GetString(2),
+                DepartmentId = readerRow.GetInt32(4),
+                Email = readerRow.GetString(5),
+                NumHoursWork = readerRow.GetDecimal(6),
+                ManagerId = readerRow.IsDBNull(7) ? 0 : readerRow.GetInt32(7),
+            };
+        }
+
+        public static User convertDBtoUserWithDepartment(MySqlDataReader readerRow)
+        {
+            return new User()
+            {
+                UserId = readerRow.GetInt32(0),
+                UserName = readerRow.GetString(1),
+                UserComputer = readerRow.IsDBNull(2) ? "" : readerRow.GetString(2),
+                Password = readerRow.GetString(3),
+                DepartmentId = readerRow.GetInt32(4),
+                Email = readerRow.GetString(5),
+                NumHoursWork = readerRow.GetDecimal(6),
+                ManagerId = readerRow.IsDBNull(7) ? 0 : readerRow.GetInt32(7),
+                DepartmentUser = new Models.DepartmentUser()
+                {
+                    Id = readerRow.GetInt32(8),
+                    Department = readerRow.GetString(9)
+                }
+            };
+        }
+
+        public static User convertDBtoNameUser(MySqlDataReader readerRow)
+        {
+            return new User()
+            {
+                UserId = readerRow.GetInt32(0),
+                UserName = readerRow.GetString(1),
+            };
+        }
+    }
+}
+
+using MySql.Data.MySqlClient;
+
+namespace BOL.Convertors
+{
+    public class ConvertProject
+    {
+        public static Project convertDBtoProjectsWithManager(MySqlDataReader readerRow)
+        {
+            return new Project()
+            {
+                ProjectId = readerRow.GetInt32(0),
+                NumHourForProject = readerRow.GetDecimal(1),
+                ProjectName = readerRow.GetString(2),
+                DateBegin = readerRow.GetMySqlDateTime(3).GetDateTime(),
+                DateEnd = readerRow.GetMySqlDateTime(4).GetDateTime(),
+                IsFinish = readerRow.GetBoolean(5),
+                CustomerName = readerRow.GetString(6),
+                IdManager = readerRow.GetInt32(7),
+                Manager = new User()
+                {
+                    UserId = readerRow.GetInt32(8),
+                    UserName = readerRow.GetString(9),
+                    UserComputer = readerRow.IsDBNull(10) ? "" : readerRow.GetString(10),
+                    DepartmentId = readerRow.GetInt32(12),
+                    Email = readerRow.GetString(13),
+                    NumHoursWork = readerRow.GetDecimal(14),
+                    ManagerId = readerRow.IsDBNull(15) ? 0 : readerRow.GetInt32(15)
+                }
+            };
+
+
+        }
+
+        public static Project convertDBtoProjects(MySqlDataReader readerRow)
+        {
+            return new Project()
+            {
+                ProjectId = readerRow.GetInt32(0),
+                NumHourForProject = readerRow.GetDecimal(1),
+                ProjectName = readerRow.GetString(2),
+                DateBegin = readerRow.GetMySqlDateTime(3).GetDateTime(),
+                DateEnd = readerRow.GetMySqlDateTime(4).GetDateTime(),
+                IsFinish = readerRow.GetBoolean(5),
+                CustomerName = readerRow.GetString(6),
+                IdManager = readerRow.IsDBNull(7) ? 0 : readerRow.GetInt32(7),
+            };
+        }
+    }
+}
+
+using BOL.Models;
+using MySql.Data.MySqlClient;
+using System;
+
+namespace BOL.Convertors
+{
+    public class ConvertProjectWorker
+    {
+        public static ProjectWorker convertDBtoProjectWorkersWithProjectAndUser(MySqlDataReader readerRow)
+        {
+            return new ProjectWorker()
+            {
+                ProjectId = readerRow.GetInt32(0),
+                HoursForProject = readerRow.IsDBNull(9) ? 0 : readerRow.GetDecimal(9),
+                UserId = readerRow.GetInt32(10),
+                User = new User()
+                {
+                    UserId = readerRow.GetInt32(10),
+                    UserName = readerRow.GetString(13),
+                    UserComputer = readerRow.IsDBNull(14) ? "" : readerRow.GetString(14),
+
+                    DepartmentId = readerRow.GetInt32(16),
+                    Email = readerRow.GetString(17),
+                    NumHoursWork = readerRow.GetDecimal(18),
+                    ManagerId = readerRow.IsDBNull(19) ? 0 : readerRow.GetInt32(19),
+                },
+                Project = new Project()
+                {
+                    ProjectId = readerRow.GetInt32(0),
+                    NumHourForProject = readerRow.GetDecimal(1),
+                    ProjectName = readerRow.GetString(2),
+                    DateBegin = readerRow.GetMySqlDateTime(3).GetDateTime(),
+                    DateEnd = readerRow.GetMySqlDateTime(4).GetDateTime(),
+                    IsFinish = readerRow.GetBoolean(5),
+                    CustomerName = readerRow.GetString(6),
+                    IdManager = readerRow.GetInt32(7),
+                }
+            };
+        }
+
+        public static ProjectWorker convertDBtoProjectWorkersWithProjectAndUserShort(MySqlDataReader readerRow)
+        {
+            return new ProjectWorker()
+            {
+                ProjectId = readerRow.GetInt32(0),
+                UserId = readerRow.GetInt32(1),
+                HoursForProject = readerRow.IsDBNull(2) ? 0 : readerRow.GetDecimal(2),
+                Project = new Project()
+                {
+                    ProjectName = readerRow.GetString(3),
+                },
+                User = new User()
+                {
+                    UserName = readerRow.GetString(4),
+                }
+
+            };
+
+        }
+
+        public static ProjectWorker convertDBtoProjectWorkersWithProject(MySqlDataReader readerRow)
+        {
+            return new ProjectWorker()
+            {
+                ProjectId = readerRow.GetInt32(0),
+                HoursForProject = readerRow.IsDBNull(1) ? 0 : readerRow.GetDecimal(1),
+                UserId = readerRow.GetInt32(2),
+                SumHoursDone = readerRow.IsDBNull(12) ? 0 : readerRow.GetDecimal(12),
+                DaysLeft = (readerRow.GetMySqlDateTime(8).GetDateTime() - DateTime.Now).TotalDays,
+                MadePercent = readerRow.IsDBNull(12) || readerRow.IsDBNull(1) || readerRow.GetDecimal(1) == 0 ? 0 : readerRow.GetDecimal(12) / readerRow.GetDecimal(1) * 100,
+                Project = new Project()
+                {
+                    ProjectId = readerRow.GetInt32(4),
+                    NumHourForProject = readerRow.GetDecimal(5),
+                    ProjectName = readerRow.GetString(6),
+                    DateBegin = readerRow.GetMySqlDateTime(7).GetDateTime(),
+                    DateEnd = readerRow.GetMySqlDateTime(8).GetDateTime(),
+                    IsFinish = readerRow.GetBoolean(9),
+                    CustomerName = readerRow.GetString(10),
+                    IdManager = readerRow.GetInt32(11),
+                }
+            };
+
+        }
+    }
+}
+
+using BOL.HelpModel;
+using MySql.Data.MySqlClient;
+
+namespace BOL.Convertors
+{
+    public class ConvertReport
+    {
+        public static ReportProject ConvertDBtoReport(MySqlDataReader readerRow)
+        {
+            return new ReportProject()
+            {
+                Id = readerRow.GetInt32(0),
+                TotalHours = readerRow.GetDecimal(1),
+                Name = readerRow.GetString(2),
+                DateBegin = readerRow.GetDateTime(3),
+                DateEnd = readerRow.GetDateTime(4),
+                IsFinish = readerRow.GetBoolean(5),
+                CustomerName = readerRow.GetString(6),
+                TeamLeader = readerRow.GetString(8),
+                SumHoursDo = readerRow.IsDBNull(9) ? 0 : readerRow.GetDecimal(9),
+                Daysleft = readerRow.GetInt32(10),
+                PrecentsDone = readerRow.IsDBNull(11) ? 0 : readerRow.GetDecimal(11)
+            };
+        }
+
+        public static ReportWorker ConvertDBtoReportWorker(MySqlDataReader readerRow)
+        {
+            return new ReportWorker()
+            {
+                Id = readerRow.GetInt32(0),
+                Name = readerRow.GetString(1),
+                SumHoursDo = readerRow.GetInt32(2),
+                TotalHours = readerRow.GetInt32(3)
+            };
+        }
+
+        public static ReportProject ConvertDBtoDepartment(MySqlDataReader readerRow)
+        {
+            return new ReportProject()
+            {
+                Id = readerRow.GetInt32(0),
+                Name = readerRow.GetString(1),
+                TotalHours = readerRow.IsDBNull(2) ? 0 : readerRow.GetDecimal(2),
+                SumHoursDo = readerRow.IsDBNull(3) ? 0 : readerRow.GetDecimal(3),
+                PrecentsDone = readerRow.IsDBNull(4) ? 0 : readerRow.GetDecimal(4)
+            };
+        }
+
+        public static ReportProject ConvertDBtoWorkerInReport(MySqlDataReader readerRow)
+        {
+            return new ReportProject()
+            {
+                SumHoursDo = readerRow.IsDBNull(0) ? 0 : readerRow.GetDecimal(0),
+                PrecentsDone = readerRow.IsDBNull(1) ? 0 : readerRow.GetDecimal(1),
+                TotalHours = readerRow.IsDBNull(2) ? 0 : readerRow.GetDecimal(2),
+                Name = readerRow.GetString(5),
+                Id = readerRow.GetInt32(4)
+            };
+        }
+
+        public static ReportWorker ConvertDBtoWorkersReport(MySqlDataReader readerRow)
+        {
+            return new ReportWorker()
+            {
+                Year = readerRow.GetInt32(0),
+                Month = readerRow.GetInt32(1),
+                Name = readerRow.GetString(2),
+                TotalHours = readerRow.GetDecimal(3),
+                SumHoursDo = readerRow.GetDecimal(4),
+                SumHoursDoMonth = readerRow.GetDecimal(5),
+                PrecentsDone = readerRow.GetDecimal(3) == 0 ? 0 : readerRow.GetDecimal(5) / readerRow.GetDecimal(3) * 100
+            };
+        }
+    }
+}
+
+using BOL.HelpModel;
+using MySql.Data.MySqlClient;
+
+namespace BOL.Convertors
+{
+    public class ConvertSendEmail
+    {
+        public static SendEmailEndProject convertDBtoProjects(MySqlDataReader readerRow)
+        {
+            return new SendEmailEndProject()
+            {
+                UserName = readerRow.GetString(0),
+                EmailUser = readerRow.GetString(1),
+                nameProject = readerRow.GetString(2),
+                userNameManager = readerRow.GetString(3),
+                EmailManager = readerRow.GetString(4),
+                HourDo = readerRow.GetDecimal(5),
+                hoursForProject = readerRow.GetDecimal(6),
+                stayToDo = readerRow.GetDecimal(7)
+            };
+        }
+    }
+}
+
+using BOL.HelpModel;
+using MySql.Data.MySqlClient;
+
+namespace BOL.Convertors
+{
+    public class ConvertSumHoursUser
+    {
+        public static SumHoursDoneUser convertDBtoSumHoursUser(MySqlDataReader readerRow)
+        {
+            return new SumHoursDoneUser()
+            {
+                Label = readerRow.IsDBNull(1) ? "" : readerRow.GetString(1),
+                Data = readerRow.IsDBNull(0) ? 0 : readerRow.GetDecimal(0)
+            };
+        }
+
+        public static SumHoursDoneUser convertDBtoSumHoursUser1(MySqlDataReader readerRow)
+        {
+            return new SumHoursDoneUser()
+            {
+                Label = readerRow.IsDBNull(3) ? "" : readerRow.GetString(3),
+                Data = readerRow.IsDBNull(0) ? 0 : readerRow.GetDecimal(0)
+            };
+        }
+    }
+}
+
+```
      
      
 # Test api with `curl`
