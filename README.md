@@ -7,6 +7,7 @@
 * PHP
 * WinForm
 * Angular
+* windows service
 
 ## Authors
 
@@ -40,6 +41,18 @@ To install the app in your computer you have to:
       shoose which server you want to: the web api or the php one in the `global` page. update it.
 
   5. Run the winform project, if you want it to be the client.
+  
+  6. Run the windows service
+      * Go to Start, Microsoft Visual Studio 2012, Visual Studio Tools, then Developer Command Prompt for VS2012. (Right click on it and         select Run as administrator).
+      * Set path of your Windows Service's .exe file in command prompt (e.g. "C:\Users\USER1\Documents\Visual Studio 
+        2012\Projects\WindowsServiceProject1\bin\Debug\").
+      * Then run the command: "InstallUtil WindowsServiceProject1.exe". Now your service is successfully installed in your system.
+      * Now go to Control Panel, Administrative Tools, then Services and find the service name as your windows service (eg.  
+        TestService).
+        
+        Windows Service is implemented and installed successfully in your system and will send mail daily itself at the time which 
+        specified App.Config file. 
+
       
         *important note: in order to `send email` feature  from the php server(just if you have xampp) in your computer follow this instruction:* 
         
