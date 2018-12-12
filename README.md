@@ -254,9 +254,393 @@ Task Managmant uses a number of extension:
 
      * Get- The worker can see also a graph of his hours done for his projects.
      
+# Code of each tier
+
+### DAL
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Configuration;
+using System.Data;
+using MySql.Data.MySqlClient;
+
+namespace _00_DAL
+{
+    public static class DBAccess
+    {
+
+        static MySqlConnection Connection = new MySqlConnection(ConfigurationManager.AppSettings["conectionString1"].ToString());
+
+ 
+        public static int? RunNonQuery(string query)
+        {
+            try
+            {
+                lock (Connection)
+                {
+                    Connection.Open();
+                    MySqlCommand command = new MySqlCommand(query, Connection);
+                    return command.ExecuteNonQuery();
+                }
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+            finally
+            {
+                if (Connection.State != ConnectionState.Closed)
+                {
+                    Connection.Close();
+                }
+            }
+        }
+
+        public static object RunScalar(string query)
+        {
+            try
+            {
+                lock (Connection)
+                {
+                    Connection.Open();
+                    MySqlCommand command = new MySqlCommand(query, Connection);
+                    return command.ExecuteScalar();
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+            finally
+            {
+                if (Connection.State != ConnectionState.Closed)
+                {
+                    Connection.Close();
+                }
+            }
+
+        }
+
+        public static List<T> RunReader<T>(string query, Func<MySqlDataReader, List<T>> func)
+        {
+            try
+            {
+                lock (Connection)
+                {
+                    Connection.Open();
+                    MySqlCommand command = new MySqlCommand(query, Connection);
+                    MySqlDataReader reader = command.ExecuteReader();
+                    return func(reader);
+                }
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+            finally
+            {
+                if (Connection.State != ConnectionState.Closed)
+                {
+                    Connection.Close();
+                }
+            }
+        }
+
+        public static int? RunStore(string nameStore, List<string> conditionValue, List<string> condition)
+        {
+            try
+            {
+                lock (Connection)
+                {
+                    Connection.Open();
+                    MySqlCommand command = new MySqlCommand(nameStore, Connection);
+                    command.CommandType = CommandType.StoredProcedure;
+                    for (int i = 0; i < condition.Count; i++)
+                    {
+                        command.Parameters.AddWithValue(condition[i], conditionValue[i]);
+                    }
+
+                    return command.ExecuteNonQuery();
+                }
+            }
+            catch
+            {
+                return null;
+            }
+            finally
+            {
+                if (Connection.State != ConnectionState.Closed)
+                {
+                    Connection.Close();
+                }
+            }
+        }
+
+
+        public static List<T> RunReader<T>(Func<MySqlDataReader, List<T>> func, string nameStore, List<string> conditionValue, List<string> condition)
+        {
+            try
+            {
+                lock (Connection)
+                {
+                    Connection.Open();
+                    MySqlCommand command = new MySqlCommand(nameStore, Connection);
+                    command.CommandType = CommandType.StoredProcedure;
+                    for (int i = 0; i < condition.Count; i++)
+                    {
+                        command.Parameters.AddWithValue(condition[i], conditionValue[i]);
+                    }
+                    MySqlDataReader reader = command.ExecuteReader();
+                    return func(reader);
+                }
+            }
+            catch
+            {
+                return null;
+            }
+            finally
+            {
+                if (Connection.State != ConnectionState.Closed)
+                {
+                    Connection.Close();
+                }
+            }
+        }
+    }
+}
+
+```
+
+### BOL
+ * Model
+
+```csharp
+
+using BOL.Models;
+using BOL.Validations;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+
+
+namespace BOL
+{
+    public class User
+    {
+        public User()
+        {
+            ProjectsWorkers = new List<ProjectWorker>();
+            Users = new List<User>();
+        }
+
+        public int UserId { get; set; }
+        [Required(ErrorMessage = "Name is required")]
+        [MinLength(2, ErrorMessage = "name must be more than 2 chars"), MaxLength(15, ErrorMessage = "name must be less than 15 chars")]
+        public string UserName { get; set; }
+
+        [Required(ErrorMessage = "Password is required")]
+        [UniquePassword]
+        [MinLength(64), MaxLength(64)]
+        public string Password { get; set; }
+
+        [MinLength(64), MaxLength(64)]
+        [Required(ErrorMessage = "ConfirmPassword is required")]
+        [ConfirmPassword]
+        public string ConfirmPassword { get; set; }
+
+        [Required(ErrorMessage = "Email is required")]
+        [UniqueEmail]
+        [EmailAddress]
+        public string Email { get; set; }
+
+        public string UserComputer { get; set; } = "";
+
+        [Range(1,12,ErrorMessage = "NumHoursWork betwween 1-12")]
+        public decimal NumHoursWork { get; set; } = 9;
+
+        public int? ManagerId { get; set; }
+
+        [Required(ErrorMessage = "DepartmentId is required")]
+        public int DepartmentId { get; set; }
+
+        public DepartmentUser DepartmentUser { get; set; }
+        public List<ProjectWorker> ProjectsWorkers { get; set; }
+        public User Manager { get; set; }
+        public List<User> Users { get; set; }
+
+    }
+}
+
+
+using BOL.Models;
+using BOL.Validations;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+
+namespace BOL
+{
+    public class Project
+    {
+
+        public Project()
+        {
+
+            HoursForDepartment = new List<HourForDepartment>();
+            PresentsDayUser = new List<PresentDay>();
+            ProjectWorkers = new List<ProjectWorker>();
+        }
+
+        public int ProjectId { get; set; }
+
+        [Required(ErrorMessage = "Name is required")]
+        [MaxLength(15, ErrorMessage = "ProjectName grade than 15 chars"), MinLength(2, ErrorMessage = "ProjectName less than 2 chars")]
+        [UniqueProjectName]
+        public string ProjectName { get; set; }
+
+        [Required(ErrorMessage = "CustomerName is required")]
+        [MaxLength(15, ErrorMessage = "CustomerName grade than 15 chars"), MinLength(2, ErrorMessage = "CustomerName less than 2 chars")]
+        public string CustomerName { get; set; }
+
+        [Required]
+        [Range(2, int.MaxValue, ErrorMessage = "numHourForProject not grate than 2")]
+        public decimal NumHourForProject { get; set; }
+
+
+        [Required(ErrorMessage = "DateBegin is required")]
+        [ValidDateTimeBegin]
+        public DateTime DateBegin { get; set; }
+
+
+        [Required(ErrorMessage = "DateEnd is required")]
+        [ValidDateTimeEnd]
+        public DateTime DateEnd { get; set; }
+
+        public bool IsFinish { get; set; } = false;
+        [DefaultValue(1)]
+        public int IdManager { get; set; }
+
+        public User Manager { get; set; }
+        public List<HourForDepartment> HoursForDepartment { get; set; }
+
+        public List<PresentDay> PresentsDayUser { get; set; }
+
+        public List<ProjectWorker> ProjectWorkers { get; set; }
+
+    }
+}
+
+
+using System.ComponentModel.DataAnnotations;
+
+namespace BOL.Models
+{
+    public class ProjectWorker
+    {
+        [Required]
+        public int ProjectId { get; set; }
+
+        [Required]
+        public int UserId { get; set; }
+
+        public decimal HoursForProject { get; set; }
+
+        public bool IsActive { get; set; } = true;
+
+        public Project Project { get; set; }
+
+        public User User { get; set; }
+
+        public decimal SumHoursDone { get; set; }
+
+        public decimal MadePercent { get; set; }
+
+        public double DaysLeft  { get; set; }
+    }
+}
+
+
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using BOL.HelpModel;
+
+namespace BOL.Models
+{
+    public class HourForDepartment
+    {
+
+        [Required(ErrorMessage = "ProjectId is required")]
+        public int ProjectId { get; set; }
+
+        [Required(ErrorMessage = "DepartmentId is required")]
+        public int DepartmentId { get; set; }
+
+        [Range(0, int.MaxValue, ErrorMessage = "Sum hours must be more than 0 hours")]
+        public int SumHours { get; set; }
+
+        public Project Project { get; set; }
+
+        public DepartmentUser DepartmentUser { get; set; }
+
+        public List<ReportProject> WorkersInDepartment { get; set; }
+    }
+}
+
+
+using BOL.Validations;
+using System;
+using System.ComponentModel.DataAnnotations;
+
+namespace BOL.Models
+{
+    public class PresentDay
+    {
+        public int PresentDayId { get; set; }
+
+        [ValidDateToday]
+        public DateTime TimeBegin { get; set; }
+
+        [ValidDateToday]
+        public DateTime TimeEnd { get; set; }
+
+        public decimal SumHoursDay { get; set; }
+
+        [Required(ErrorMessage = "UserId is Required")]
+        public int UserId { get; set; }
+
+        [Required(ErrorMessage = "ProjectId is Required")]
+        public int ProjectId { get; set; }
+
+        public User User { get; set; }
+
+        public Project Project { get; set; }
+
+    }
+}
+
+using System.Collections.Generic;
+
+namespace BOL.Models
+{
+    public class DepartmentUser
+    {
+        public DepartmentUser()
+        {
+            HourForDepartments = new List<HourForDepartment>();
+            Users = new List<User>();
+        }
+        public int Id { get; set; }
+        public string Department { get; set; }
+        public List<HourForDepartment> HourForDepartments { get; set; }
+        public List<User> Users { get; set; }
+
+    }
+}
+
+```
      
      
-     # Test api with `curl`
+# Test api with `curl`
 
 ### Get Request
 ```
