@@ -3818,15 +3818,23 @@ l.com","ManagerId":21}]* Connection #0 to host localhost left intact
 ***
 ## WinForms +  Angular
 ### login 
+![picture](1.PNG) 
 ### Manager page
-![picture](add_project.png)  
-![picture](team_management.png) 
-![picture](add_worker.png)  
-![picture](edit_worker.png)
+![picture](2.PNG)  
+![picture](3.PNG) 
+![picture](4.PNG)  
+![picture](5.PNG)
+![picture](6.PNG)
+![picture](7.PNG)
+![picture](8.PNG)
+![picture](9.PNG)
 ### Team leader page
-![picture](worker_list.png) 
-![picture](graph_hours_status.png) 
+![picture](10.PNG)
+![picture](11.PNG)
 ### Worker page 
-![picture](home_page.png)  
+![picture](12.PNG)
+![picture](13.PNG)
+![picture](14.PNG)
+![picture](15.PNG)  
 
  
