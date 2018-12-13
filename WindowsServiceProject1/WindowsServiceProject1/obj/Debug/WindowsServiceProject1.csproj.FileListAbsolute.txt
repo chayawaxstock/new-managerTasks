@@ -1,0 +1,17 @@
+E:\JRs\WindowsServiceProject1\WindowsServiceProject1\obj\Debug\WindowsServiceProject1.csprojResolveAssemblyReference.cache
+E:\JRs\WindowsServiceProject1\WindowsServiceProject1\bin\Debug\WindowsServiceProject1.exe.config
+E:\JRs\WindowsServiceProject1\WindowsServiceProject1\bin\Debug\WindowsServiceProject1.exe
+E:\JRs\WindowsServiceProject1\WindowsServiceProject1\bin\Debug\WindowsServiceProject1.pdb
+E:\JRs\WindowsServiceProject1\WindowsServiceProject1\obj\Debug\WindowsServiceProject1.exe
+E:\JRs\WindowsServiceProject1\WindowsServiceProject1\obj\Debug\WindowsServiceProject1.pdb
+E:\JRs\WindowsServiceProject1\WindowsServiceProject1\obj\Debug\WindowsServiceProject1.ProjectInstaller.resources
+E:\JRs\WindowsServiceProject1\WindowsServiceProject1\obj\Debug\WindowsServiceProject1.csproj.GenerateResource.Cache
+C:\Users\User\Downloads\WindowsServiceProject1\WindowsServiceProject1\bin\Debug\WindowsServiceProject1.exe.config
+C:\Users\User\Downloads\WindowsServiceProject1\WindowsServiceProject1\bin\Debug\WindowsServiceProject1.exe
+C:\Users\User\Downloads\WindowsServiceProject1\WindowsServiceProject1\bin\Debug\WindowsServiceProject1.pdb
+C:\Users\User\Downloads\WindowsServiceProject1\WindowsServiceProject1\obj\Debug\WindowsServiceProject1.csprojResolveAssemblyReference.cache
+C:\Users\User\Downloads\WindowsServiceProject1\WindowsServiceProject1\obj\Debug\WindowsServiceProject1.ProjectInstaller.resources
+C:\Users\User\Downloads\WindowsServiceProject1\WindowsServiceProject1\obj\Debug\WindowsServiceProject1.csproj.GenerateResource.Cache
+C:\Users\User\Downloads\WindowsServiceProject1\WindowsServiceProject1\obj\Debug\WindowsServiceProject1.csproj.CoreCompileInputs.cache
+C:\Users\User\Downloads\WindowsServiceProject1\WindowsServiceProject1\obj\Debug\WindowsServiceProject1.exe
+C:\Users\User\Downloads\WindowsServiceProject1\WindowsServiceProject1\obj\Debug\WindowsServiceProject1.pdb

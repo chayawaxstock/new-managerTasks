@@ -1,0 +1,27 @@
+﻿using manageTask.Models;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+
+namespace manageTask.Validations
+{
+    class ValidDateTimeEndAttribute : ValidationAttribute
+    {
+        protected override ValidationResult IsValid(object value, ValidationContext validationContext)
+        {
+            ValidationResult validationResult = ValidationResult.Success;
+
+            //Take userId and email of the user parameter
+            DateTime dateBegin = (validationContext.ObjectInstance as Project).DateBegin;
+
+            if (dateBegin >= DateTime.Parse(value.ToString()))
+            {
+                ErrorMessage = "date end project grate than date begin project";
+                validationResult = new ValidationResult(ErrorMessageString, new List<string>() { "DateEnd" });
+            }
+
+            return validationResult;
+        }
+
+    }
+}

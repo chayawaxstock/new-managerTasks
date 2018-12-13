@@ -1,0 +1,4 @@
+12/12/2018 20:39:32: Service started
+12/12/2018 20:39:49: Service stopped
+13/12/2018 02:19:42: Service started
+13/12/2018 02:19:46: Service stopped
