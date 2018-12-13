@@ -18,7 +18,7 @@
  
  * [To desciption of the project follow this link](https://github.com/AnnaKarpf/Full-stack-web-development_4578-2/blob/master/12_Web%20api/final%20project.docx)
 ## DB Schema
-![picture](https://github.com/chayawaxstock/finishcourseseldat/blob/master/%D7%A4%D7%A8%D7%95%D7%99%D7%A7%D7%98%20%D7%A1%D7%95%D7%A4%D7%99%20%D7%A1%D7%9C%D7%93%D7%98/%D7%93%D7%98%D7%94%20%D7%91%D7%99%D7%99%D7%A1/db_schema.mwb) 
+![picture](db_schema.png) 
 ## Development server
 
 To install the app in your computer you have to:
