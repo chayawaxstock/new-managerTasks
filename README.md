@@ -22,10 +22,10 @@
 ## Development server
 
 To install the app in your computer you have to:
-  1. [Run the `mySql` code](https://github.com/chayawaxstock/finishcourseseldat/blob/master/%D7%A4%D7%A8%D7%95%D7%99%D7%A7%D7%98%20%D7%A1%D7%95%D7%A4%D7%99%20%D7%A1%D7%9C%D7%93%D7%98/%D7%93%D7%98%D7%94%20%D7%91%D7%99%D7%99%D7%A1/database.sql)
-      To see some data in the live demo, you should add data to your tabels or
-      [Run the data- script code](https://github.com/tamarosenzweig/TaskManagmant/blob/master/mysql-script.md)
-      
+  1. [Run the `mySql` createDB](https://github.com/chayawaxstock/finishcourseseldat/blob/master/%D7%A4%D7%A8%D7%95%D7%99%D7%A7%D7%98%20%D7%A1%D7%95%D7%A4%D7%99%20%D7%A1%D7%9C%D7%93%D7%98/%D7%93%D7%98%D7%94%20%D7%91%D7%99%D7%99%D7%A1/database.sql)
+     [Run the `mySql` create Stores Procedures]    (https://github.com/chayawaxstock/finishcourseseldat/blob/master/%D7%A4%D7%A8%D7%95%D7%99%D7%A7%D7%98%20%D7%A1%D7%95%D7%A4%D7%99%20%D7%A1%D7%9C%D7%93%D7%98/%D7%93%D7%98%D7%94%20%D7%91%D7%99%D7%99%D7%A1/STORE.sql)
+     [Run the `mySql` create Views]      (https://github.com/chayawaxstock/finishcourseseldat/blob/master/%D7%A4%D7%A8%D7%95%D7%99%D7%A7%D7%98%20%D7%A1%D7%95%D7%A4%D7%99%20%D7%A1%D7%9C%D7%93%D7%98/%D7%93%D7%98%D7%94%20%D7%91%D7%99%D7%99%D7%A1/VIEWS.sql)
+    [Run the `mySql` create Triggers]    (https://github.com/chayawaxstock/finishcourseseldat/blob/master/%D7%A4%D7%A8%D7%95%D7%99%D7%A7%D7%98%20%D7%A1%D7%95%D7%A4%D7%99%20%D7%A1%D7%9C%D7%93%D7%98/%D7%93%D7%98%D7%94%20%D7%91%D7%99%D7%99%D7%A1/trigger.sql)    
 
   2. Run the `back-end` project.(the web api one)  This is the server. Navigate to `http://localhost:12988/`. 
      The app will automatically reload 
